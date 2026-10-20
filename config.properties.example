@@ -1,0 +1,3 @@
+db.url=jdbc:sqlserver://localhost:1433;databaseName=SIGELAB;encrypt=true;trustServerCertificate=true
+   db.usuario=su_usuario_sql
+   db.contrasena=su_contrasena
