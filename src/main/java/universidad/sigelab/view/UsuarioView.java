@@ -1,5 +1,6 @@
 package universidad.sigelab.view;
 
+import universidad.sigelab.controller.ReconocimientoFacialController;
 import universidad.sigelab.controller.UsuarioController;
 import universidad.sigelab.exception.ManejadorErrores;
 import universidad.sigelab.model.Rol;
@@ -10,6 +11,7 @@ import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /** Pantalla de usuarios (solo ADMIN). Las reglas viven en UsuarioService. */
 public class UsuarioView extends JFrame {
@@ -29,10 +31,12 @@ public class UsuarioView extends JFrame {
     private JButton btGuardar;
     private JButton btDesactivar;
     private JButton btActivar;
+    private JButton btRegistrarRostro;        // NUEVO: registra el rostro del usuario seleccionado
 
     private static final String[] COLUMNAS = {"Usuario", "Nombre", "Apellido", "Correo", "Rol", "Estado"};
 
     private final UsuarioController controladorUsuario = new UsuarioController();
+    private final ReconocimientoFacialController controladorFacial = new ReconocimientoFacialController();
 
     private final DefaultTableModel modeloTabla = new DefaultTableModel(COLUMNAS, 0) {
         @Override
@@ -88,6 +92,7 @@ public class UsuarioView extends JFrame {
         btGuardar.addActionListener(evento -> guardar());
         btDesactivar.addActionListener(evento -> cambiarEstado(false));
         btActivar.addActionListener(evento -> cambiarEstado(true));
+        btRegistrarRostro.addActionListener(evento -> registrarRostro());
         labelEstado.setText("-");
     }
 
@@ -204,6 +209,54 @@ public class UsuarioView extends JFrame {
         } catch (Exception e) {
             mostrarError(e);
         }
+    }
+
+    /**
+     * Abre la cámara y registra el rostro del usuario seleccionado (segundo factor del login).
+     * Se ejecuta fuera del hilo de la interfaz porque la captura tarda varios segundos.
+     */
+    private void registrarRostro() {
+        if (idUsuarioSeleccionado == 0) {
+            JOptionPane.showMessageDialog(this, "Seleccione un usuario de la tabla.",
+                    "Usuarios", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int respuesta = JOptionPane.showConfirmDialog(this,
+                "Se abrirá la cámara y se tomarán varias fotos del rostro de "
+                        + textNombreUsuario.getText() + ".\nLa persona debe estar frente a la cámara. ¿Continuar?",
+                "Registrar rostro", JOptionPane.YES_NO_OPTION);
+        if (respuesta != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        int idUsuario = idUsuarioSeleccionado;
+        String nombreUsuario = textNombreUsuario.getText();
+        btRegistrarRostro.setEnabled(false);
+
+        new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() {
+                controladorFacial.registrarRostro(idUsuario);
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                btRegistrarRostro.setEnabled(true);
+                try {
+                    get();
+                    JOptionPane.showMessageDialog(UsuarioView.this,
+                            "El rostro de " + nombreUsuario + " se registró correctamente.",
+                            "Registrar rostro", JOptionPane.INFORMATION_MESSAGE);
+                } catch (ExecutionException e) {
+                    JOptionPane.showMessageDialog(UsuarioView.this,
+                            ManejadorErrores.mensajeParaUsuario(e.getCause()),
+                            "No se pudo registrar el rostro", JOptionPane.WARNING_MESSAGE);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }.execute();
     }
 
     private void mostrarError(Exception e) {

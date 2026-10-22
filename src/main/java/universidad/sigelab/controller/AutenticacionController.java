@@ -7,21 +7,12 @@ public class AutenticacionController {
 
     private final AutenticacionService servicioAutenticacion = new AutenticacionService();
 
-    /** Paso 1 del login. Devuelve el usuario si las credenciales son válidas y está ACTIVO. */
-    public Usuario validarCredenciales(String nombreUsuario, String contrasena) {
-        return servicioAutenticacion.validarCredenciales(nombreUsuario, contrasena);
-    }
-
-    /** Último paso: abre la sesión. Se llamará después de la validación facial. */
-    public void completarInicioSesion(Usuario usuario) {
-        servicioAutenticacion.completarInicioSesion(usuario);
-    }
-
-    /** Atajo TEMPORAL mientras no exista el reconocimiento facial (Etapa 4). */
-    public Usuario iniciarSesionSinFacial(String nombreUsuario, String contrasena) {
-        Usuario usuario = servicioAutenticacion.validarCredenciales(nombreUsuario, contrasena);
-        servicioAutenticacion.completarInicioSesion(usuario);
-        return usuario;
+    /**
+     * Usuario + contraseña + validación facial. Abre la cámara, así que puede tardar unos segundos:
+     * la vista debe llamarlo fuera del hilo de la interfaz.
+     */
+    public Usuario iniciarSesion(String nombreUsuario, String contrasena) {
+        return servicioAutenticacion.iniciarSesion(nombreUsuario, contrasena);
     }
 
     public void cerrarSesion() {

@@ -3,6 +3,7 @@ package universidad.sigelab.service;
 import universidad.sigelab.enums.AccionAuditoria;
 import universidad.sigelab.enums.EstadoRegistro;
 import universidad.sigelab.exception.BusinessException;
+import universidad.sigelab.model.ResultadoFacial;
 import universidad.sigelab.model.Usuario;
 import universidad.sigelab.repository.UsuarioRepository;
 import universidad.sigelab.util.HashUtil;
@@ -11,17 +12,32 @@ import universidad.sigelab.util.SesionUsuario;
 import java.util.Optional;
 
 /**
- * Login en dos pasos (sección 6.1 de la guía):
- *   1) validarCredenciales: usuario + contraseña + usuario ACTIVO (RN-01).
- *   2) validación facial (se agrega en la Etapa 4, RN-02).
- *   3) completarInicioSesion: abre la sesión y audita LOGIN_EXITOSO.
+ * Login en tres pasos obligatorios (sección 6.1 de la guía):
+ *   1) usuario + contraseña + usuario ACTIVO (RN-01)
+ *   2) validación facial (RN-02): credenciales válidas NO bastan
+ *   3) apertura de sesión y auditoría de LOGIN_EXITOSO
+ * Todo ocurre dentro de iniciarSesion: la pantalla no puede saltarse el paso del rostro (RN-20).
  */
 public class AutenticacionService {
 
     private final UsuarioRepository repositorioUsuario = new UsuarioRepository();
     private final AuditoriaService servicioAuditoria = new AuditoriaService();
+    private final ReconocimientoFacialService servicioFacial = new ReconocimientoFacialService();
 
-    public Usuario validarCredenciales(String nombreUsuario, String contrasena) {
+    public Usuario iniciarSesion(String nombreUsuario, String contrasena) {
+        Usuario usuario = validarCredenciales(nombreUsuario, contrasena);
+        verificarRostro(usuario);
+        completarInicioSesion(usuario);
+        return usuario;
+    }
+
+    public void cerrarSesion() {
+        SesionUsuario.cerrar();
+    }
+
+    // ---------- Paso 1: credenciales ----------
+
+    private Usuario validarCredenciales(String nombreUsuario, String contrasena) {
         if (nombreUsuario == null || nombreUsuario.isBlank() || contrasena == null || contrasena.isEmpty()) {
             throw new BusinessException("Ingrese su usuario y su contraseña.");
         }
@@ -49,18 +65,34 @@ public class AutenticacionService {
         return usuario;
     }
 
-    /** Se llama cuando TODOS los factores pasaron (hoy solo credenciales; luego, también el rostro). */
-    public void completarInicioSesion(Usuario usuario) {
-        if (usuario == null || usuario.getEstado() != EstadoRegistro.ACTIVO) {
-            throw new BusinessException("No se puede iniciar sesión con este usuario.");
+    // ---------- Paso 2: rostro ----------
+
+    /** RN-02: si el rostro no se reconoce, o el servicio facial no responde, el acceso se deniega. */
+    private void verificarRostro(Usuario usuario) {
+        ResultadoFacial resultado;
+        try {
+            resultado = servicioFacial.verificar(usuario.getIdUsuario());
+        } catch (BusinessException e) {
+            registrarLoginFallido(usuario, "Verificación facial no disponible: " + e.getMessage());
+            throw e;
         }
+        if (!resultado.isExito()) {
+            registrarLoginFallido(usuario, "Rostro no reconocido: " + resultado.getMensaje());
+            throw new BusinessException("Acceso denegado. " + resultado.getMensaje());
+        }
+    }
+
+    private void registrarLoginFallido(Usuario usuario, String descripcion) {
+        servicioAuditoria.registrar(usuario.getIdUsuario(), AccionAuditoria.LOGIN_FALLIDO, "Usuario",
+                usuario.getIdUsuario(), descripcion + " (usuario '" + usuario.getNombreUsuario() + "')");
+    }
+
+    // ---------- Paso 3: sesión ----------
+
+    private void completarInicioSesion(Usuario usuario) {
         SesionUsuario.iniciar(usuario);
         servicioAuditoria.registrar(usuario.getIdUsuario(), AccionAuditoria.LOGIN_EXITOSO, "Usuario",
                 usuario.getIdUsuario(), "Inicio de sesión de '" + usuario.getNombreUsuario() + "'");
-    }
-
-    public void cerrarSesion() {
-        SesionUsuario.cerrar();
     }
 
     private boolean coincideContrasena(Usuario usuario, String contrasenaIngresada) {

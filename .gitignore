@@ -35,6 +35,10 @@ build/
 
 ### VS Code ###
 .vscode/
+facial/rostros/
+__pycache__/
+*.pyc
+
 
 ### Mac OS ###
 .DS_Store
