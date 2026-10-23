@@ -1,6 +1,6 @@
 /* =====================================================================
    SIGELAB - Sistema de Gestión y Control de Laboratorios Universitarios
-   Curso 017 - Programación II - UMG
+   Programación II - UMG
    Script para Microsoft SQL Server
    ===================================================================== */
 
