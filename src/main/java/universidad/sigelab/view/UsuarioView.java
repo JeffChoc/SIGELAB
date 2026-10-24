@@ -1,3 +1,4 @@
+
 package universidad.sigelab.view;
 
 import universidad.sigelab.controller.ReconocimientoFacialController;
@@ -7,23 +8,16 @@ import universidad.sigelab.model.Rol;
 import universidad.sigelab.model.Usuario;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
+import javax.swing.plaf.basic.BasicButtonUI;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Cursor;
-import java.awt.Font;
+import javax.swing.table.JTableHeader;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-/**
- * Administración de usuarios de SIGELAB.
- * Las reglas de negocio permanecen en UsuarioService.
- */
 public class UsuarioView extends JFrame {
 
     // Componentes vinculados con UsuarioView.form
@@ -43,28 +37,38 @@ public class UsuarioView extends JFrame {
     private JButton btActivar;
     private JButton btRegistrarRostro;
 
-    // Paleta visual
+    // Colores
     private static final Color AZUL_OSCURO =
             new Color(25, 45, 75);
+
     private static final Color AZUL =
-            new Color(43, 108, 176);
-    private static final Color FONDO =
-            new Color(245, 247, 251);
-    private static final Color BLANCO = Color.WHITE;
-    private static final Color TEXTO =
-            new Color(45, 55, 72);
-    private static final Color GRIS =
-            new Color(220, 226, 235);
+            new Color(41, 98, 160);
+
     private static final Color VERDE =
-            new Color(22, 135, 95);
+            new Color(39, 140, 90);
+
     private static final Color ROJO =
-            new Color(194, 55, 55);
-    private static final Color GRIS_BOTON =
-            new Color(100, 116, 139);
+            new Color(190, 55, 55);
+
+    private static final Color FONDO =
+            new Color(245, 247, 250);
+
+    private static final Color BLANCO =
+            Color.WHITE;
+
+    private static final Color NEGRO =
+            Color.BLACK;
+
+    private static final Color BORDE =
+            new Color(210, 218, 228);
 
     private static final String[] COLUMNAS = {
-            "Usuario", "Nombre", "Apellido",
-            "Correo", "Rol", "Estado"
+            "Usuario",
+            "Nombre",
+            "Apellido",
+            "Correo",
+            "Rol",
+            "Estado"
     };
 
     private final UsuarioController controladorUsuario =
@@ -75,9 +79,9 @@ public class UsuarioView extends JFrame {
 
     private final DefaultTableModel modeloTabla =
             new DefaultTableModel(COLUMNAS, 0) {
+
                 @Override
-                public boolean isCellEditable(
-                        int fila, int columna) {
+                public boolean isCellEditable(int fila, int columna) {
                     return false;
                 }
             };
@@ -85,28 +89,172 @@ public class UsuarioView extends JFrame {
     private List<Usuario> usuariosMostrados =
             new ArrayList<>();
 
-    // 0 = nuevo usuario; otro valor = edición
+    // 0 = nuevo usuario; otro valor = usuario seleccionado.
     private int idUsuarioSeleccionado = 0;
 
     public UsuarioView() {
         super("SIGELAB | Administración de usuarios");
 
         setContentPane(Panelprincipal);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
+        configurarInterfaz();
         configurarTabla();
-        aplicarEstiloVisual();
         cargarRoles();
         registrarEventos();
         refrescarTabla();
 
-        setSize(1100, 700);
-        setMinimumSize(new java.awt.Dimension(900, 600));
+        setSize(1060, 680);
+        setMinimumSize(new Dimension(900, 580));
         setLocationRelativeTo(null);
     }
 
     // =====================================================
-    // CONFIGURACIÓN INICIAL
+    // CONFIGURACIÓN DE LA INTERFAZ
+    // =====================================================
+
+    private void configurarInterfaz() {
+        getContentPane().setBackground(FONDO);
+
+        if (Panelprincipal != null) {
+            Panelprincipal.setBackground(FONDO);
+        }
+
+        configurarCampo(textNombre);
+        configurarCampo(textApellido);
+        configurarCampo(textNombreUsuario);
+        configurarCampo(textCorreo);
+        configurarCampo(textContrasena);
+        configurarCampo(textReferenciaFacial);
+
+        configurarCombo(comboRol);
+
+        if (labelEstado != null) {
+            labelEstado.setForeground(NEGRO);
+            labelEstado.setFont(
+                    new Font("Segoe UI", Font.BOLD, 13)
+            );
+        }
+
+        // Colores sólidos para los botones.
+        configurarBoton(btNuevo, AZUL_OSCURO);
+        configurarBoton(btGuardar, VERDE);
+        configurarBoton(btActivar, VERDE);
+        configurarBoton(btDesactivar, ROJO);
+        configurarBoton(btRegistrarRostro, AZUL);
+    }
+
+    private void configurarCampo(JTextField campo) {
+        if (campo == null) {
+            return;
+        }
+
+        campo.setForeground(NEGRO);
+        campo.setCaretColor(NEGRO);
+        campo.setBackground(BLANCO);
+        campo.setFont(
+                new Font("Segoe UI", Font.PLAIN, 13)
+        );
+
+        campo.setBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDE),
+                        BorderFactory.createEmptyBorder(
+                                7, 9, 7, 9
+                        )
+                )
+        );
+    }
+
+    private void configurarCombo(JComboBox<Rol> combo) {
+        if (combo == null) {
+            return;
+        }
+
+        combo.setForeground(NEGRO);
+        combo.setBackground(BLANCO);
+        combo.setFont(
+                new Font("Segoe UI", Font.PLAIN, 13)
+        );
+
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<?> lista,
+                    Object valor,
+                    int indice,
+                    boolean seleccionado,
+                    boolean tieneFoco) {
+
+                super.getListCellRendererComponent(
+                        lista,
+                        valor,
+                        indice,
+                        seleccionado,
+                        tieneFoco
+                );
+
+                setForeground(NEGRO);
+
+                if (seleccionado) {
+                    setBackground(
+                            new Color(220, 232, 246)
+                    );
+                } else {
+                    setBackground(BLANCO);
+                }
+
+                return this;
+            }
+        });
+    }
+
+    /**
+     * Configura el botón con fondo sólido y texto blanco.
+     * BasicButtonUI evita que el tema visual de Swing
+     * ignore el color de fondo establecido.
+     */
+    private void configurarBoton(
+            JButton boton,
+            Color color) {
+
+        if (boton == null) {
+            return;
+        }
+
+        // Aplicar la interfaz básica antes de personalizar.
+        boton.setUI(new BasicButtonUI());
+
+        boton.setBackground(color);
+        boton.setForeground(BLANCO);
+
+        boton.setFont(
+                new Font("Segoe UI", Font.BOLD, 13)
+        );
+
+        boton.setOpaque(true);
+        boton.setContentAreaFilled(true);
+        boton.setBorderPainted(false);
+        boton.setFocusPainted(false);
+        boton.setRolloverEnabled(false);
+
+        boton.setCursor(
+                new Cursor(Cursor.HAND_CURSOR)
+        );
+
+        boton.setBorder(
+                BorderFactory.createEmptyBorder(
+                        10, 18, 10, 18
+                )
+        );
+
+        boton.setMargin(
+                new Insets(10, 18, 10, 18)
+        );
+    }
+
+    // =====================================================
+    // CONFIGURACIÓN DE LA TABLA
     // =====================================================
 
     private void configurarTabla() {
@@ -116,6 +264,155 @@ public class UsuarioView extends JFrame {
                 ListSelectionModel.SINGLE_SELECTION
         );
 
+        tablaUsuarios.setRowHeight(34);
+
+        tablaUsuarios.setFont(
+                new Font("Segoe UI", Font.PLAIN, 12)
+        );
+
+        tablaUsuarios.setForeground(NEGRO);
+        tablaUsuarios.setBackground(BLANCO);
+
+        tablaUsuarios.setSelectionForeground(NEGRO);
+        tablaUsuarios.setSelectionBackground(
+                new Color(220, 232, 246)
+        );
+
+        tablaUsuarios.setGridColor(
+                new Color(225, 231, 239)
+        );
+
+        tablaUsuarios.setShowHorizontalLines(true);
+        tablaUsuarios.setShowVerticalLines(false);
+        tablaUsuarios.setIntercellSpacing(
+                new Dimension(0, 1)
+        );
+
+        tablaUsuarios.setFillsViewportHeight(true);
+        tablaUsuarios.setAutoCreateRowSorter(true);
+
+        // Texto negro en todas las celdas.
+        DefaultTableCellRenderer renderizador =
+                new DefaultTableCellRenderer() {
+
+                    @Override
+                    public Component getTableCellRendererComponent(
+                            JTable tabla,
+                            Object valor,
+                            boolean seleccionado,
+                            boolean tieneFoco,
+                            int fila,
+                            int columna) {
+
+                        super.getTableCellRendererComponent(
+                                tabla,
+                                valor,
+                                seleccionado,
+                                tieneFoco,
+                                fila,
+                                columna
+                        );
+
+                        setForeground(NEGRO);
+
+                        if (seleccionado) {
+                            setBackground(
+                                    new Color(220, 232, 246)
+                            );
+                        } else if (fila % 2 == 0) {
+                            setBackground(BLANCO);
+                        } else {
+                            setBackground(
+                                    new Color(246, 248, 251)
+                            );
+                        }
+
+                        setBorder(
+                                BorderFactory.createEmptyBorder(
+                                        0, 10, 0, 10
+                                )
+                        );
+
+                        setFont(
+                                new Font("Segoe UI", Font.PLAIN, 12)
+                        );
+
+                        return this;
+                    }
+                };
+
+        for (int columna = 0;
+             columna < tablaUsuarios.getColumnCount();
+             columna++) {
+
+            tablaUsuarios.getColumnModel()
+                    .getColumn(columna)
+                    .setCellRenderer(renderizador);
+        }
+
+        // Encabezado con letras negras.
+        JTableHeader encabezado =
+                tablaUsuarios.getTableHeader();
+
+        encabezado.setForeground(NEGRO);
+        encabezado.setBackground(BLANCO);
+
+        encabezado.setFont(
+                new Font("Segoe UI", Font.BOLD, 12)
+        );
+
+        encabezado.setOpaque(true);
+        encabezado.setReorderingAllowed(false);
+
+        encabezado.setPreferredSize(
+                new Dimension(0, 38)
+        );
+
+        encabezado.setDefaultRenderer(
+                new DefaultTableCellRenderer() {
+
+                    @Override
+                    public Component getTableCellRendererComponent(
+                            JTable tabla,
+                            Object valor,
+                            boolean seleccionado,
+                            boolean tieneFoco,
+                            int fila,
+                            int columna) {
+
+                        super.getTableCellRendererComponent(
+                                tabla,
+                                valor,
+                                seleccionado,
+                                tieneFoco,
+                                fila,
+                                columna
+                        );
+
+                        setForeground(NEGRO);
+                        setBackground(BLANCO);
+
+                        setFont(
+                                new Font("Segoe UI", Font.BOLD, 12)
+                        );
+
+                        setHorizontalAlignment(LEFT);
+
+                        setBorder(
+                                BorderFactory.createCompoundBorder(
+                                        BorderFactory.createMatteBorder(
+                                                0, 0, 1, 1, BORDE
+                                        ),
+                                        BorderFactory.createEmptyBorder(
+                                                0, 10, 0, 10
+                                        )
+                                )
+                        );
+
+                        return this;
+                    }
+                });
+
         tablaUsuarios.getSelectionModel()
                 .addListSelectionListener(evento -> {
                     if (!evento.getValueIsAdjusting()) {
@@ -124,11 +421,16 @@ public class UsuarioView extends JFrame {
                 });
     }
 
+    // =====================================================
+    // CARGAR ROLES Y USUARIOS
+    // =====================================================
+
     private void cargarRoles() {
         try {
             comboRol.removeAllItems();
 
-            for (Rol rol : controladorUsuario.rolesParaCombo()) {
+            for (Rol rol :
+                    controladorUsuario.rolesParaCombo()) {
                 comboRol.addItem(rol);
             }
 
@@ -161,311 +463,14 @@ public class UsuarioView extends JFrame {
         );
 
         labelEstado.setText("-");
+        labelEstado.setForeground(NEGRO);
     }
-
-    // =====================================================
-    // DISEÑO VISUAL
-    // =====================================================
-
-    private void aplicarEstiloVisual() {
-        getContentPane().setBackground(FONDO);
-
-        if (Panelprincipal != null) {
-            Panelprincipal.setBackground(FONDO);
-            Panelprincipal.setBorder(
-                    new EmptyBorder(16, 18, 16, 18)
-            );
-        }
-
-        estilizarCampo(textNombre);
-        estilizarCampo(textApellido);
-        estilizarCampo(textNombreUsuario);
-        estilizarCampo(textCorreo);
-        estilizarCampo(textContrasena);
-        estilizarCampo(textReferenciaFacial);
-
-        estilizarCombo(comboRol);
-        estilizarEstado(labelEstado);
-
-        estilizarBoton(btNuevo, GRIS_BOTON);
-        estilizarBoton(btGuardar, AZUL);
-        estilizarBoton(btActivar, VERDE);
-        estilizarBoton(btDesactivar, ROJO);
-        estilizarBoton(btRegistrarRostro, AZUL_OSCURO);
-
-        estilizarTabla(tablaUsuarios);
-
-        // Los contenedores mantienen una apariencia uniforme.
-        aplicarFondoContenedores(Panelprincipal);
-
-        revalidate();
-        repaint();
-    }
-
-    private void estilizarCampo(JTextField campo) {
-        if (campo == null) {
-            return;
-        }
-
-        campo.setFont(
-                new Font("Segoe UI", Font.PLAIN, 14)
-        );
-
-        campo.setForeground(TEXTO);
-        campo.setBackground(BLANCO);
-        campo.setCaretColor(AZUL);
-
-        campo.setBorder(
-                BorderFactory.createCompoundBorder(
-                        new LineBorder(GRIS, 1, true),
-                        new EmptyBorder(7, 10, 7, 10)
-                )
-        );
-
-        campo.setPreferredSize(
-                new java.awt.Dimension(180, 36)
-        );
-    }
-
-    private void estilizarCombo(JComboBox<Rol> combo) {
-        if (combo == null) {
-            return;
-        }
-
-        combo.setFont(
-                new Font("Segoe UI", Font.PLAIN, 13)
-        );
-
-        combo.setForeground(TEXTO);
-        combo.setBackground(BLANCO);
-
-        combo.setBorder(
-                new LineBorder(GRIS, 1, true)
-        );
-
-        combo.setPreferredSize(
-                new java.awt.Dimension(180, 36)
-        );
-    }
-
-    private void estilizarEstado(JLabel etiqueta) {
-        if (etiqueta == null) {
-            return;
-        }
-
-        etiqueta.setFont(
-                new Font("Segoe UI", Font.BOLD, 13)
-        );
-
-        etiqueta.setForeground(AZUL_OSCURO);
-        etiqueta.setOpaque(true);
-        etiqueta.setBackground(
-                new Color(226, 232, 240)
-        );
-
-        etiqueta.setBorder(
-                new EmptyBorder(6, 10, 6, 10)
-        );
-    }
-
-    private void estilizarBoton(
-            JButton boton, Color colorOriginal) {
-
-        if (boton == null) {
-            return;
-        }
-
-        boton.setFont(
-                new Font("Segoe UI", Font.BOLD, 12)
-        );
-
-        boton.setForeground(BLANCO);
-        boton.setBackground(colorOriginal);
-        boton.setOpaque(true);
-        boton.setContentAreaFilled(true);
-        boton.setFocusPainted(false);
-        boton.setBorderPainted(false);
-
-        boton.setCursor(
-                new Cursor(Cursor.HAND_CURSOR)
-        );
-
-        boton.setBorder(
-                new EmptyBorder(9, 15, 9, 15)
-        );
-
-        boton.addMouseListener(
-                new java.awt.event.MouseAdapter() {
-                    @Override
-                    public void mouseEntered(
-                            java.awt.event.MouseEvent e) {
-                        if (boton.isEnabled()) {
-                            boton.setBackground(
-                                    colorOriginal.darker()
-                            );
-                        }
-                    }
-
-                    @Override
-                    public void mouseExited(
-                            java.awt.event.MouseEvent e) {
-                        boton.setBackground(colorOriginal);
-                    }
-                }
-        );
-    }
-
-    private void estilizarTabla(JTable tabla) {
-        if (tabla == null) {
-            return;
-        }
-
-        tabla.setFont(
-                new Font("Segoe UI", Font.PLAIN, 12)
-        );
-
-        tabla.setForeground(TEXTO);
-        tabla.setBackground(BLANCO);
-        tabla.setGridColor(
-                new Color(232, 236, 242)
-        );
-
-        tabla.setRowHeight(34);
-        tabla.setShowGrid(true);
-        tabla.setShowVerticalLines(false);
-        tabla.setIntercellSpacing(
-                new java.awt.Dimension(0, 1)
-        );
-
-        tabla.setSelectionMode(
-                ListSelectionModel.SINGLE_SELECTION
-        );
-
-        tabla.setSelectionBackground(
-                new Color(219, 234, 254)
-        );
-
-        tabla.setSelectionForeground(AZUL_OSCURO);
-        tabla.setFillsViewportHeight(true);
-        tabla.setAutoCreateRowSorter(true);
-
-        tabla.getTableHeader().setFont(
-                new Font("Segoe UI", Font.BOLD, 12)
-        );
-
-        tabla.getTableHeader().setBackground(AZUL_OSCURO);
-        tabla.getTableHeader().setForeground(BLANCO);
-        tabla.getTableHeader().setOpaque(true);
-        tabla.getTableHeader().setReorderingAllowed(false);
-
-        tabla.getTableHeader().setPreferredSize(
-                new java.awt.Dimension(0, 38)
-        );
-
-        DefaultTableCellRenderer renderizador =
-                new DefaultTableCellRenderer() {
-
-                    @Override
-                    public Component getTableCellRendererComponent(
-                            JTable table,
-                            Object value,
-                            boolean isSelected,
-                            boolean hasFocus,
-                            int row,
-                            int column) {
-
-                        Component componente =
-                                super.getTableCellRendererComponent(
-                                        table,
-                                        value,
-                                        isSelected,
-                                        hasFocus,
-                                        row,
-                                        column
-                                );
-
-                        if (isSelected) {
-                            componente.setBackground(
-                                    new Color(219, 234, 254)
-                            );
-
-                            componente.setForeground(
-                                    AZUL_OSCURO
-                            );
-
-                        } else {
-                            componente.setBackground(
-                                    row % 2 == 0
-                                            ? BLANCO
-                                            : new Color(247, 249, 252)
-                            );
-
-                            componente.setForeground(TEXTO);
-                        }
-
-                        setBorder(
-                                new EmptyBorder(4, 9, 4, 9)
-                        );
-
-                        return componente;
-                    }
-                };
-
-        renderizador.setHorizontalAlignment(
-                SwingConstants.LEFT
-        );
-
-        for (int i = 0; i < tabla.getColumnCount(); i++) {
-            tabla.getColumnModel()
-                    .getColumn(i)
-                    .setCellRenderer(renderizador);
-        }
-
-        if (tabla.getParent() instanceof JViewport) {
-            tabla.getParent().setBackground(BLANCO);
-        }
-    }
-
-    private void aplicarFondoContenedores(
-            java.awt.Container contenedor) {
-
-        if (contenedor == null) {
-            return;
-        }
-
-        for (Component componente :
-                contenedor.getComponents()) {
-
-            if (componente instanceof JScrollPane) {
-                JScrollPane scroll =
-                        (JScrollPane) componente;
-
-                scroll.setBorder(
-                        new LineBorder(GRIS, 1, true)
-                );
-
-                scroll.getViewport().setBackground(BLANCO);
-
-            } else if (componente instanceof JPanel) {
-                componente.setBackground(FONDO);
-            }
-
-            if (componente instanceof java.awt.Container) {
-                aplicarFondoContenedores(
-                        (java.awt.Container) componente
-                );
-            }
-        }
-    }
-
-    // =====================================================
-    // TABLA Y SELECCIÓN
-    // =====================================================
 
     private void refrescarTabla() {
         try {
-            usuariosMostrados =
-                    new ArrayList<>(controladorUsuario.listar());
+            usuariosMostrados = new ArrayList<>(
+                    controladorUsuario.listar()
+            );
 
             modeloTabla.setRowCount(0);
 
@@ -485,6 +490,10 @@ public class UsuarioView extends JFrame {
         }
     }
 
+    // =====================================================
+    // SELECCIONAR USUARIO
+    // =====================================================
+
     private void alSeleccionarFila() {
         int fila = tablaUsuarios.getSelectedRow();
 
@@ -500,19 +509,24 @@ public class UsuarioView extends JFrame {
             return;
         }
 
-        Usuario usuario = usuariosMostrados.get(filaModelo);
+        Usuario usuario =
+                usuariosMostrados.get(filaModelo);
 
         idUsuarioSeleccionado = usuario.getIdUsuario();
 
         textNombre.setText(usuario.getNombre());
         textApellido.setText(usuario.getApellido());
-        textNombreUsuario.setText(usuario.getNombreUsuario());
+
+        textNombreUsuario.setText(
+                usuario.getNombreUsuario()
+        );
+
         textCorreo.setText(usuario.getCorreo());
 
-        seleccionarRol(usuario.getRol().getIdRol());
+        seleccionarRol(
+                usuario.getRol().getIdRol()
+        );
 
-        // Al editar, una contraseña vacía significa que no se escribe
-        // una nueva contraseña, según la lógica del servicio.
         textContrasena.setText("");
 
         textReferenciaFacial.setText(
@@ -522,12 +536,17 @@ public class UsuarioView extends JFrame {
         labelEstado.setText(
                 usuario.getEstado().name()
         );
+
+        labelEstado.setForeground(NEGRO);
     }
 
     private void seleccionarRol(int idRol) {
         comboRol.setSelectedItem(null);
 
-        for (int i = 0; i < comboRol.getItemCount(); i++) {
+        for (int i = 0;
+             i < comboRol.getItemCount();
+             i++) {
+
             Rol rol = comboRol.getItemAt(i);
 
             if (rol.getIdRol() == idRol) {
@@ -538,7 +557,7 @@ public class UsuarioView extends JFrame {
     }
 
     // =====================================================
-    // NUEVO USUARIO
+    // LIMPIAR FORMULARIO
     // =====================================================
 
     private void limpiarFormulario() {
@@ -550,17 +569,20 @@ public class UsuarioView extends JFrame {
         textApellido.setText("");
         textNombreUsuario.setText("");
         textCorreo.setText("");
+
         comboRol.setSelectedItem(null);
+
         textContrasena.setText("");
         textReferenciaFacial.setText("");
 
         labelEstado.setText("-");
+        labelEstado.setForeground(NEGRO);
 
         textNombre.requestFocusInWindow();
     }
 
     // =====================================================
-    // GUARDAR O MODIFICAR USUARIO
+    // GUARDAR Y MODIFICAR USUARIOS
     // =====================================================
 
     private void guardar() {
@@ -606,7 +628,7 @@ public class UsuarioView extends JFrame {
                     "El usuario "
                             + guardado.getNombreUsuario()
                             + " se guardó correctamente.",
-                    "Usuario guardado",
+                    "Usuarios",
                     JOptionPane.INFORMATION_MESSAGE
             );
 
@@ -615,11 +637,14 @@ public class UsuarioView extends JFrame {
 
         } catch (Exception e) {
             mostrarError(e);
+
+        } finally {
+            Arrays.fill(caracteresContrasena, '\0');
         }
     }
 
     // =====================================================
-    // ACTIVAR Y DESACTIVAR USUARIO
+    // ACTIVAR Y DESACTIVAR USUARIOS
     // =====================================================
 
     private void cambiarEstado(boolean activar) {
@@ -633,15 +658,15 @@ public class UsuarioView extends JFrame {
             return;
         }
 
-        String accion = activar ? "activar" : "desactivar";
+        String accion =
+                activar ? "activar" : "desactivar";
 
         int respuesta = JOptionPane.showConfirmDialog(
                 this,
                 "¿Desea " + accion + " al usuario "
                         + textNombreUsuario.getText() + "?",
-                "Confirmar acción",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
+                "Confirmar operación",
+                JOptionPane.YES_NO_OPTION
         );
 
         if (respuesta != JOptionPane.YES_OPTION) {
@@ -668,7 +693,7 @@ public class UsuarioView extends JFrame {
     }
 
     // =====================================================
-    // REGISTRO FACIAL
+    // REGISTRAR ROSTRO
     // =====================================================
 
     private void registrarRostro() {
@@ -687,11 +712,10 @@ public class UsuarioView extends JFrame {
                 "Se abrirá la cámara y se tomarán varias fotos "
                         + "del rostro de "
                         + textNombreUsuario.getText()
-                        + ".\nLa persona debe estar frente a la cámara."
-                        + "\n¿Desea continuar?",
+                        + ".\nLa persona debe estar frente "
+                        + "a la cámara. ¿Desea continuar?",
                 "Registrar rostro",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
+                JOptionPane.YES_NO_OPTION
         );
 
         if (respuesta != JOptionPane.YES_OPTION) {
@@ -699,7 +723,9 @@ public class UsuarioView extends JFrame {
         }
 
         int idUsuario = idUsuarioSeleccionado;
-        String nombreUsuario = textNombreUsuario.getText();
+
+        String nombreUsuario =
+                textNombreUsuario.getText();
 
         btRegistrarRostro.setEnabled(false);
 
@@ -707,7 +733,10 @@ public class UsuarioView extends JFrame {
 
             @Override
             protected Void doInBackground() {
-                controladorFacial.registrarRostro(idUsuario);
+                controladorFacial.registrarRostro(
+                        idUsuario
+                );
+
                 return null;
             }
 
@@ -722,7 +751,7 @@ public class UsuarioView extends JFrame {
                             UsuarioView.this,
                             "El rostro de " + nombreUsuario
                                     + " se registró correctamente.",
-                            "Registro facial completado",
+                            "Registrar rostro",
                             JOptionPane.INFORMATION_MESSAGE
                     );
 
@@ -742,7 +771,7 @@ public class UsuarioView extends JFrame {
                     JOptionPane.showMessageDialog(
                             UsuarioView.this,
                             "La operación fue interrumpida.",
-                            "Registro facial",
+                            "Registrar rostro",
                             JOptionPane.WARNING_MESSAGE
                     );
                 }
@@ -751,7 +780,7 @@ public class UsuarioView extends JFrame {
     }
 
     // =====================================================
-    // MANEJO DE ERRORES
+    // MOSTRAR ERRORES
     // =====================================================
 
     private void mostrarError(Exception e) {
