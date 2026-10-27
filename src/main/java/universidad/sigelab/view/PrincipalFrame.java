@@ -69,6 +69,7 @@ public class PrincipalFrame extends JFrame {
 
     // ---------- Menú ----------
 
+
     private void construirMenu() {
         RolUsuario rol = usuario.getRol().getNombre();
         boolean esAdmin = rol == RolUsuario.ADMIN;
@@ -78,36 +79,95 @@ public class PrincipalFrame extends JFrame {
 
         // ----- Catálogos -----
         JMenu menuCatalogos = new JMenu("Catálogos");
-        agregarOpcion(menuCatalogos, "Equipos", "equipos", () -> new EquiposView(usuario));
-        // El menú se adapta al rol, pero el permiso real lo valida cada Service (RN-20).
+
+        agregarOpcion(
+                menuCatalogos,
+                "Equipos",
+                "equipos",
+                () -> new EquiposView(usuario)
+        );
+
         if (esAdmin) {
-            agregarOpcion(menuCatalogos, "Laboratorios", "laboratorios", LaboratorioView::new);
-            agregarOpcion(menuCatalogos, "Tipos de equipo", "tipos", TipoEquipoView::new);
-            agregarOpcion(menuCatalogos, "Usuarios", "usuarios", UsuarioView::new);
+            agregarOpcion(
+                    menuCatalogos,
+                    "Laboratorios",
+                    "laboratorios",
+                    LaboratorioView::new
+            );
+
+            agregarOpcion(
+                    menuCatalogos,
+                    "Tipos de equipo",
+                    "tipos",
+                    TipoEquipoView::new
+            );
+
+            agregarOpcion(
+                    menuCatalogos,
+                    "Usuarios",
+                    "usuarios",
+                    UsuarioView::new
+            );
         }
+
         barraMenu.add(menuCatalogos);
 
-        // ----- Operaciones y reportes (ADMIN y ENCARGADO) -----
+        // ----- Operaciones -----
         if (puedeOperar) {
             JMenu menuOperaciones = new JMenu("Operaciones");
-            agregarOpcion(menuOperaciones, "Préstamos", "prestamos", PrestamoView::new);
-            agregarOpcion(menuOperaciones, "Devoluciones", "devoluciones", DevolucionView::new);
-            barraMenu.add(menuOperaciones);
 
+            agregarOpcion(
+                    menuOperaciones,
+                    "Préstamos",
+                    "prestamos",
+                    PrestamoView::new
+            );
+
+            agregarOpcion(
+                    menuOperaciones,
+                    "Devoluciones",
+                    "devoluciones",
+                    DevolucionView::new
+            );
+
+            barraMenu.add(menuOperaciones);
+        }
+
+        // ----- Reportes -----
+        if (puedeOperar) {
             JMenu menuReportes = new JMenu("Reportes");
-            agregarOpcion(menuReportes, "Consultas y reportes", "reportes", ReporteFrame::new);
-            // Más adelante: Auditoría (solo ADMIN)
+
+            agregarOpcion(
+                    menuReportes,
+                    "Consultas y reportes",
+                    "reportes",
+                    ReporteFrame::new
+            );
+
+            if (esAdmin) {
+                agregarOpcion(
+                        menuReportes,
+                        "Auditoría",
+                        "auditoria",
+                        AuditoriaView::new
+                );
+            }
+
             barraMenu.add(menuReportes);
         }
 
         // ----- Sesión -----
         JMenu menuSesion = new JMenu("Sesión");
+
         JMenuItem itemCerrar = new JMenuItem("Cerrar sesión");
         itemCerrar.addActionListener(evento -> cerrarSesion());
+
         menuSesion.add(itemCerrar);
         barraMenu.add(menuSesion);
+
         setJMenuBar(barraMenu);
     }
+
 
     private void agregarOpcion(JMenu menu, String texto, String clave, Supplier<JFrame> fabricaVentana) {
         JMenuItem opcion = new JMenuItem(texto);
