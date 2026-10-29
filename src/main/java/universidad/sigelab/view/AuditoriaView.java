@@ -54,6 +54,7 @@ public class AuditoriaView extends JFrame {
 
         setSize(1150, 620);
         setLocationRelativeTo(null);
+        EstiloSIGELAB.aplicar(this);
 
         // Carga los registros recientes al abrir.
         consultar();

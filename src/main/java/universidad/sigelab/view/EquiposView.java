@@ -86,6 +86,7 @@ public class EquiposView extends JFrame {
 
         setSize(1050, 640);
         setLocationRelativeTo(null);
+        EstiloSIGELAB.aplicar(this);
     }
 
     // ---------- Configuración inicial ----------
@@ -389,36 +390,75 @@ public class EquiposView extends JFrame {
             mostrarError(e);
         }
     }
+// ---------- Código QR del equipo ----------
 
-    // ---------- Código QR del equipo ----------
-
-    /** Guarda como PNG el QR que contiene el código de inventario del equipo seleccionado. */
+    /**
+     * Genera el QR del equipo seleccionado y lo guarda en la
+     * carpeta codigos_qr del proyecto.
+     */
     private void generarQr() {
         if (idEquipoSeleccionado == 0) {
-            informar("Seleccione un equipo de la tabla.");
+            informar("Seleccione un equipo de la tabla para generar su QR.");
             return;
         }
-        String codigo = textInventario.getText();
 
-        JFileChooser selector = new JFileChooser();
-        selector.setDialogTitle("Guardar código QR de " + codigo);
-        selector.setSelectedFile(new File(codigo + ".png"));
-        selector.setFileFilter(new FileNameExtensionFilter("Imagen PNG", "png"));
-        if (selector.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+        String codigo = textInventario.getText().trim();
+
+        if (codigo.isEmpty()) {
+            informar("El equipo seleccionado no tiene código de inventario.");
             return;
-        }
-        File destino = selector.getSelectedFile();
-        if (!destino.getName().toLowerCase().endsWith(".png")) {
-            destino = new File(destino.getParentFile(), destino.getName() + ".png");
         }
 
         try {
+            // Crear la carpeta de códigos QR si todavía no existe.
+            File carpetaQr = new File(
+                    System.getProperty("user.dir"),
+                    "codigos_qr"
+            );
+
+            if (!carpetaQr.exists() && !carpetaQr.mkdirs()) {
+                throw new java.io.IOException(
+                        "No se pudo crear la carpeta para los códigos QR."
+                );
+            }
+
+            // Evitar caracteres que puedan causar problemas en el nombre.
+            String nombreArchivo = codigo.replaceAll(
+                    "[^a-zA-Z0-9._-]",
+                    "_"
+            );
+
+            File destino = new File(
+                    carpetaQr,
+                    nombreArchivo + ".png"
+            );
+
+            // Generar el QR mediante el controlador existente.
             controladorQr.generarQr(codigo, destino);
-            JLabel vistaPrevia = new JLabel("Guardado en: " + destino.getAbsolutePath(),
-                    new ImageIcon(destino.getAbsolutePath()), SwingConstants.CENTER);
+
+            // Mostrar la imagen generada.
+            ImageIcon icono = new ImageIcon(destino.getAbsolutePath());
+
+            JLabel vistaPrevia = new JLabel(
+                    "<html><div style='text-align:center'>"
+                            + "<b>QR generado correctamente</b><br>"
+                            + "Equipo: " + codigo + "<br>"
+                            + "Archivo: " + destino.getName()
+                            + "</div></html>",
+                    icono,
+                    SwingConstants.CENTER
+            );
+
             vistaPrevia.setVerticalTextPosition(SwingConstants.BOTTOM);
             vistaPrevia.setHorizontalTextPosition(SwingConstants.CENTER);
-            JOptionPane.showMessageDialog(this, vistaPrevia, "QR de " + codigo, JOptionPane.PLAIN_MESSAGE);
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    vistaPrevia,
+                    "Código QR del equipo",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+
         } catch (Exception e) {
             mostrarError(e);
         }

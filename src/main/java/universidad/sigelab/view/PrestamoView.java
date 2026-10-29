@@ -1,4 +1,3 @@
-
 package universidad.sigelab.view;
 
 import universidad.sigelab.controller.PrestamoController;
@@ -18,6 +17,8 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.Insets;
+import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -28,8 +29,12 @@ import java.util.List;
 
 /**
  * Vista de préstamos de SIGELAB.
- * Permite gestionar préstamos con varios equipos.
- * Las reglas de negocio permanecen en PrestamoService.
+ *
+ * Permite gestionar préstamos con varios equipos y leer
+ * códigos QR para identificar equipos.
+ *
+ * La generación de códigos QR se realiza desde EquiposView.
+ * Las reglas de negocio permanecen en los servicios.
  */
 public class PrestamoView extends JFrame {
 
@@ -71,6 +76,16 @@ public class PrestamoView extends JFrame {
     private static final Color GRIS_BOTON =
             new Color(100, 116, 139);
 
+    /*
+     * Carpeta predeterminada para buscar los QR generados
+     * desde EquiposView.
+     *
+     * Si tu QrService guarda los códigos en otra carpeta,
+     * cambia esta ruta para que coincida con la ubicación real.
+     */
+    private static final Path CARPETA_QR =
+            Path.of(System.getProperty("user.dir"), "codigos_qr");
+
     private static final String[] COLUMNAS_EQUIPOS = {
             "Código", "Nombre", "Tipo", "Laboratorio", "Estado"
     };
@@ -96,8 +111,7 @@ public class PrestamoView extends JFrame {
     private final DefaultTableModel modeloEquipos =
             new DefaultTableModel(COLUMNAS_EQUIPOS, 0) {
                 @Override
-                public boolean isCellEditable(
-                        int fila, int columna) {
+                public boolean isCellEditable(int fila, int columna) {
                     return false;
                 }
             };
@@ -105,8 +119,7 @@ public class PrestamoView extends JFrame {
     private final DefaultTableModel modeloPrestamos =
             new DefaultTableModel(COLUMNAS_PRESTAMOS, 0) {
                 @Override
-                public boolean isCellEditable(
-                        int fila, int columna) {
+                public boolean isCellEditable(int fila, int columna) {
                     return false;
                 }
             };
@@ -125,6 +138,8 @@ public class PrestamoView extends JFrame {
         setSize(1100, 700);
         setMinimumSize(new java.awt.Dimension(900, 600));
         setLocationRelativeTo(null);
+
+        EstiloSIGELAB.aplicar(this);
     }
 
     // =====================================================
@@ -171,10 +186,12 @@ public class PrestamoView extends JFrame {
         }
 
         estilizarPestanas();
+
         estilizarCampo(textSolicitante);
         estilizarCampo(textIdentificacion);
         estilizarCampo(textObservaciones);
         estilizarCampo(textCodigoEquipo);
+
         estilizarFecha();
 
         estilizarBoton(btAgregarEquipo, AZUL);
@@ -260,8 +277,9 @@ public class PrestamoView extends JFrame {
     }
 
     private void estilizarBoton(
-            JButton boton, Color colorOriginal) {
-
+            JButton boton,
+            Color colorOriginal
+    ) {
         if (boton == null) {
             return;
         }
@@ -289,7 +307,8 @@ public class PrestamoView extends JFrame {
                 new java.awt.event.MouseAdapter() {
                     @Override
                     public void mouseEntered(
-                            java.awt.event.MouseEvent e) {
+                            java.awt.event.MouseEvent e
+                    ) {
                         if (boton.isEnabled()) {
                             boton.setBackground(
                                     colorOriginal.equals(AZUL)
@@ -301,7 +320,8 @@ public class PrestamoView extends JFrame {
 
                     @Override
                     public void mouseExited(
-                            java.awt.event.MouseEvent e) {
+                            java.awt.event.MouseEvent e
+                    ) {
                         boton.setBackground(colorOriginal);
                     }
                 }
@@ -341,7 +361,6 @@ public class PrestamoView extends JFrame {
 
         DefaultTableCellRenderer renderizador =
                 new DefaultTableCellRenderer() {
-
                     @Override
                     public Component getTableCellRendererComponent(
                             JTable table,
@@ -349,8 +368,8 @@ public class PrestamoView extends JFrame {
                             boolean isSelected,
                             boolean hasFocus,
                             int row,
-                            int column) {
-
+                            int column
+                    ) {
                         Component componente =
                                 super.getTableCellRendererComponent(
                                         table,
@@ -482,15 +501,21 @@ public class PrestamoView extends JFrame {
     // =====================================================
 
     private void leerQr() {
-        JFileChooser selector = new JFileChooser();
+        File carpetaInicial = CARPETA_QR.toFile();
+
+        JFileChooser selector = new JFileChooser(
+                carpetaInicial.isDirectory()
+                        ? carpetaInicial
+                        : new File(System.getProperty("user.dir"))
+        );
 
         selector.setDialogTitle(
-                "Seleccione la imagen del código QR"
+                "Seleccione la imagen del código QR del equipo"
         );
 
         selector.setFileFilter(
                 new FileNameExtensionFilter(
-                        "Imágenes (png, jpg, jpeg, gif, bmp)",
+                        "Imágenes (PNG, JPG, JPEG, GIF, BMP)",
                         "png", "jpg", "jpeg", "gif", "bmp"
                 )
         );
@@ -500,14 +525,31 @@ public class PrestamoView extends JFrame {
             return;
         }
 
+        File archivoSeleccionado = selector.getSelectedFile();
+
         try {
             String codigo = controladorQr.leerCodigo(
-                    selector.getSelectedFile()
+                    archivoSeleccionado
             );
 
-            textCodigoEquipo.setText(codigo);
+            if (codigo == null || codigo.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "No se encontró un código válido en la imagen.",
+                        "Lectura de QR",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
 
-            // Identifica el equipo; no confirma el préstamo.
+            textCodigoEquipo.setText(codigo.trim());
+
+            /*
+             * El QR solo identifica el equipo.
+             * agregarEquipo() comprueba que sea válido y que
+             * no esté agregado previamente, según el controlador.
+             * No confirma el préstamo automáticamente.
+             */
             agregarEquipo();
 
         } catch (Exception e) {
@@ -677,3 +719,4 @@ public class PrestamoView extends JFrame {
         );
     }
 }
+

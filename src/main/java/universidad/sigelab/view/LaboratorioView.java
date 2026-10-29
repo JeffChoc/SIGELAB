@@ -51,6 +51,7 @@ public class LaboratorioView extends JFrame {
 
         setSize(900, 560);
         setLocationRelativeTo(null);
+        EstiloSIGELAB.aplicar(this);
     }
 
     // ---------- Configuración inicial ----------
