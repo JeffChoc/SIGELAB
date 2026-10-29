@@ -30,6 +30,7 @@ public class LoginView extends JFrame {
         pack(); // si la ventana sale muy pequeña, use setSize(400, 300) en lugar de pack()
         setResizable(false);
         setLocationRelativeTo(null);
+        EstiloSIGELAB.aplicar(this);
     }
 
     private void ingresar() {

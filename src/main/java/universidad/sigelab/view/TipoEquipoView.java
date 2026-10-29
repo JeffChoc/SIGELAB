@@ -84,6 +84,7 @@ public class TipoEquipoView extends JFrame {
         setSize(850, 560);
         setMinimumSize(new Dimension(700, 480));
         setLocationRelativeTo(null);
+        EstiloSIGELAB.aplicar(this);
     }
 
     // =====================================================

@@ -107,6 +107,7 @@ public class UsuarioView extends JFrame {
         setSize(1060, 680);
         setMinimumSize(new Dimension(900, 580));
         setLocationRelativeTo(null);
+        EstiloSIGELAB.aplicar(this);
     }
 
     // =====================================================
