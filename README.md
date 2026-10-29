@@ -3,13 +3,13 @@
 Proyecto final del curso **Programación II** (Universidad Mariano Gálvez de Guatemala,
 Facultad de Ingeniería en Sistemas, cuarto semestre 2026). Catedrático: Ing. Alejandro Díaz.
 
-- **Integrantes:** Jeffery Elias Choc Hilario               3590-25-5427
+- **Integrantes:** [Jeffery Elias Choc Hilario               3590-25-5427
                    Yeremi Anderson Alvarez Galeano          3590-25-18649
                    William David Choc Arrecis               3590-25-15860
                    Irad Aroldo De León Alvarado             3590-25-23576
                    Nidelson Ubaldi Villatoro Castillo       3590-25-24408
                    Lester David Mejia Rios                  3590-25-14664
-                   Irving David Concohá Garrido             3590-24-21346
+                   Irving David Concohá Garrido             3590-24-21346]
 - **Repositorio:** https://github.com/JeffChoc/SIGELAB
 
 Aplicación de escritorio en Java Swing con base de datos Microsoft SQL Server. Controla el ciclo de vida de
