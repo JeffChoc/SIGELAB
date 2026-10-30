@@ -2,7 +2,6 @@ package gt.edu.umg.sigelab.mobile
 
 import android.graphics.Color
 import android.os.Bundle
-import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -14,12 +13,18 @@ import com.google.android.material.card.MaterialCardView
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 class EquiposActivity : AppCompatActivity() {
 
     private lateinit var lista: LinearLayout
     private lateinit var estado: TextView
     private lateinit var actualizar: MaterialButton
+
+    private val codigoBuscado: String
+        get() = intent.getStringExtra("codigo_equipo")
+            .orEmpty()
+            .trim()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,11 +52,23 @@ class EquiposActivity : AppCompatActivity() {
             insets
         }
 
-        pantalla.addView(texto("Equipos del laboratorio", 26f, true))
-        pantalla.addView(texto("Consulta su disponibilidad actual.", 15f))
+        val titulo = if (codigoBuscado.isBlank()) {
+            "Equipos del laboratorio"
+        } else {
+            "Equipo escaneado"
+        }
+
+        val descripcion = if (codigoBuscado.isBlank()) {
+            "Consulta su disponibilidad actual."
+        } else {
+            "Código de inventario: $codigoBuscado"
+        }
+
+        pantalla.addView(texto(titulo, 26f, true))
+        pantalla.addView(texto(descripcion, 15f))
 
         actualizar = MaterialButton(this).apply {
-            text = "Actualizar equipos"
+            text = "Actualizar información"
             isAllCaps = false
             setOnClickListener { cargarEquipos() }
         }
@@ -93,17 +110,30 @@ class EquiposActivity : AppCompatActivity() {
         }
 
         actualizar.isEnabled = false
-        estado.text = "Consultando equipos…"
+        estado.text = "Consultando información…"
         lista.removeAllViews()
+
+        val direccion = if (codigoBuscado.isBlank()) {
+            "$servidor/equipos"
+        } else {
+            val codigo = URLEncoder.encode(
+                codigoBuscado,
+                "UTF-8"
+            )
+
+            "$servidor/equipos?codigo=$codigo"
+        }
 
         Thread {
             var conexion: HttpURLConnection? = null
 
             try {
-                conexion = URL("$servidor/equipos")
+                val http = URL(direccion)
                     .openConnection() as HttpURLConnection
 
-                conexion.apply {
+                conexion = http
+
+                http.apply {
                     connectTimeout = 5000
                     readTimeout = 10000
                     requestMethod = "GET"
@@ -112,30 +142,42 @@ class EquiposActivity : AppCompatActivity() {
                     setRequestProperty("Accept", "application/json")
                 }
 
-                if (conexion.responseCode != 200) {
+                if (http.responseCode != 200) {
                     throw IllegalStateException(
-                        "El servidor no pudo entregar los equipos."
+                        "No se pudo consultar la información."
                     )
                 }
 
-                val respuesta = conexion.inputStream
+                val respuesta = http.inputStream
                     .bufferedReader(Charsets.UTF_8)
                     .use { it.readText() }
 
-                val equipos = JSONObject(respuesta).getJSONArray("equipos")
+                val equipos = JSONObject(respuesta)
+                    .getJSONArray("equipos")
 
                 runOnUiThread {
                     if (!isFinishing && !isDestroyed) {
                         actualizar.isEnabled = true
 
-                        estado.text = if (equipos.length() == 0) {
-                            "No hay equipos registrados."
-                        } else {
-                            "${equipos.length()} equipos encontrados"
+                        estado.text = when {
+                            equipos.length() == 0 &&
+                                    codigoBuscado.isNotBlank() ->
+                                "No existe un equipo con ese código."
+
+                            equipos.length() == 0 ->
+                                "No hay equipos registrados."
+
+                            codigoBuscado.isNotBlank() ->
+                                "Información actual del equipo"
+
+                            else ->
+                                "${equipos.length()} equipos encontrados"
                         }
 
                         for (indice in 0 until equipos.length()) {
-                            agregarTarjeta(equipos.getJSONObject(indice))
+                            agregarTarjeta(
+                                equipos.getJSONObject(indice)
+                            )
                         }
                     }
                 }
@@ -144,8 +186,9 @@ class EquiposActivity : AppCompatActivity() {
                     if (!isFinishing && !isDestroyed) {
                         actualizar.isEnabled = true
                         estado.text =
-                            "No se pudieron cargar los equipos. " +
-                                    "Revisa el servidor y el Wi-Fi, y toca Actualizar."
+                            "No se pudo consultar la información. " +
+                                    "Revisa el servidor y el Wi-Fi, " +
+                                    "y toca Actualizar."
                     }
                 }
             } finally {
@@ -175,7 +218,9 @@ class EquiposActivity : AppCompatActivity() {
             setPadding(dp(18), dp(18), dp(18), dp(18))
         }
 
-        contenido.addView(texto(equipo.optString("nombre"), 19f, true))
+        contenido.addView(
+            texto(equipo.optString("nombre"), 19f, true)
+        )
 
         contenido.addView(
             texto("Código: ${equipo.optString("codigo")}", 14f)
@@ -188,18 +233,27 @@ class EquiposActivity : AppCompatActivity() {
         val descripcion = listOf(
             equipo.optString("marca"),
             equipo.optString("modelo")
-        ).filter { it.isNotBlank() }.joinToString(" ")
+        ).filter {
+            it.isNotBlank()
+        }.joinToString(" ")
 
         if (descripcion.isNotBlank()) {
             contenido.addView(texto(descripcion, 14f))
         }
 
         contenido.addView(
-            texto("Laboratorio: ${equipo.optString("laboratorio")}", 14f)
+            texto(
+                "Laboratorio: ${equipo.optString("laboratorio")}",
+                14f
+            )
         )
 
         contenido.addView(
-            texto("Estado: ${equipo.optString("estado")}", 15f, true)
+            texto(
+                "Estado: ${equipo.optString("estado")}",
+                15f,
+                true
+            )
         )
 
         tarjeta.addView(contenido)
@@ -218,14 +272,17 @@ class EquiposActivity : AppCompatActivity() {
             setPadding(0, dp(4), 0, dp(4))
 
             if (negrita) {
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTypeface(
+                    typeface,
+                    android.graphics.Typeface.BOLD
+                )
             }
-
-            textAlignment = View.TEXT_ALIGNMENT_VIEW_START
         }
     }
 
     private fun dp(valor: Int): Int {
-        return (valor * resources.displayMetrics.density).toInt()
+        return (
+                valor * resources.displayMetrics.density
+                ).toInt()
     }
 }

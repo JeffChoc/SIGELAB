@@ -14,6 +14,8 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
@@ -26,6 +28,43 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var numeroComprobacion = 0
+
+    private val lectorQr = registerForActivityResult(
+        ScanContract()
+    ) { resultado ->
+        val codigo = resultado.contents?.trim().orEmpty()
+
+        when {
+            codigo.isBlank() -> {
+                Toast.makeText(
+                    this,
+                    "Escaneo cancelado",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            codigo.length > 100 -> {
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("Código no compatible")
+                    .setMessage(
+                        "Escanea un QR de inventario de SIGELAB."
+                    )
+                    .setPositiveButton("Aceptar", null)
+                    .show()
+            }
+
+            else -> {
+                val pantalla = Intent(
+                    this,
+                    EquiposActivity::class.java
+                ).apply {
+                    putExtra("codigo_equipo", codigo)
+                }
+
+                startActivity(pantalla)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,11 +92,14 @@ class MainActivity : AppCompatActivity() {
             R.id.btnEquipos
         ).setOnClickListener {
             startActivity(
-                Intent(
-                    this,
-                    EquiposActivity::class.java
-                )
+                Intent(this, EquiposActivity::class.java)
             )
+        }
+
+        findViewById<MaterialButton>(
+            R.id.btnEscanearQr
+        ).setOnClickListener {
+            abrirLectorQr()
         }
 
         findViewById<MaterialButton>(
@@ -73,6 +115,35 @@ class MainActivity : AppCompatActivity() {
         }
 
         comprobarConexion()
+    }
+
+    private fun abrirLectorQr() {
+        val servidor = preferencias.getString(
+            "servidor",
+            ""
+        ).orEmpty()
+
+        if (servidor.isBlank()) {
+            Toast.makeText(
+                this,
+                "Primero configura la conexión",
+                Toast.LENGTH_LONG
+            ).show()
+
+            mostrarConfiguracion()
+            return
+        }
+
+        val opciones = ScanOptions().apply {
+            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            setPrompt("Escanea el código QR del equipo")
+            setCameraId(0)
+            setBeepEnabled(false)
+            setBarcodeImageEnabled(false)
+            setOrientationLocked(false)
+        }
+
+        lectorQr.launch(opciones)
     }
 
     private fun mostrarConfiguracion() {
@@ -164,10 +235,7 @@ class MainActivity : AppCompatActivity() {
 
         numeroComprobacion += 1
         val solicitudActual = numeroComprobacion
-
-        val estado = findViewById<TextView>(
-            R.id.txtEstadoConexion
-        )
+        val estado = findViewById<TextView>(R.id.txtEstadoConexion)
 
         if (servidor.isBlank()) {
             estado.text = "Sin servidor configurado"
@@ -191,11 +259,7 @@ class MainActivity : AppCompatActivity() {
                     readTimeout = 5000
                     instanceFollowRedirects = false
                     useCaches = false
-
-                    setRequestProperty(
-                        "Accept",
-                        "application/json"
-                    )
+                    setRequestProperty("Accept", "application/json")
                 }
 
                 val codigo = http.responseCode
@@ -225,8 +289,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     else -> {
-                        "No se pudo comprobar el servidor " +
-                                "(HTTP $codigo)"
+                        "No se pudo comprobar el servidor (HTTP $codigo)"
                     }
                 }
             } catch (_: java.net.SocketTimeoutException) {
@@ -247,8 +310,7 @@ class MainActivity : AppCompatActivity() {
                     solicitudActual == numeroComprobacion
                 ) {
                     estado.text =
-                        "$mensaje\n\n" +
-                                "Toca aquí para comprobar otra vez"
+                        "$mensaje\n\nToca aquí para comprobar otra vez"
                 }
             }
         }.start()
