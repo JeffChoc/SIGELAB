@@ -262,12 +262,15 @@ GO
 INSERT INTO Rol (nombre, descripcion) VALUES
  ('ADMIN',     'Acceso completo al sistema'),
  ('ENCARGADO', 'Operación cotidiana de laboratorios'),
+
  ('DOCENTE',   'Consultas / solicitante');
 
 INSERT INTO Usuario (nombre, apellido, nombre_usuario, contrasena_hash, correo, id_rol, estado) VALUES
  ('Administrador', 'Sistema',  'admin',      CONVERT(VARCHAR(64), HASHBYTES('SHA2_256','Admin123*'),2),      'admin@umg.edu.gt',      1, 'ACTIVO'),
  ('Carlos',        'Pérez',    'encargado1', CONVERT(VARCHAR(64), HASHBYTES('SHA2_256','Encargado123*'),2),  'encargado1@umg.edu.gt', 2, 'ACTIVO'),
- ('María',         'López',    'docente1',   CONVERT(VARCHAR(64), HASHBYTES('SHA2_256','Docente123*'),2),    'docente1@umg.edu.gt',   3, 'INACTIVO'); -- sirve para probar RN-01
+ ('María',         'López',    'docente1',   CONVERT(VARCHAR(64), HASHBYTES('SHA2_256','Docente123*'),2),    'docente1@umg.edu.gt',   3, 'INACTIVO'), -- sirve para probar RN-01
+ ('Betzy',         'Pérez',    'betzy1',     CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', 'Encargado123*'), 2),'betzy@sigelab.edu.gt', 2, 'ACTIVO');
+
 
 INSERT INTO Laboratorio (codigo, nombre, ubicacion, capacidad, estado) VALUES
  ('LAB-01', 'Laboratorio de Computación 1', 'Edificio A, nivel 2', 30, 'ACTIVO'),
