@@ -1,4 +1,3 @@
-
 package universidad.sigelab.view;
 
 import universidad.sigelab.controller.AutenticacionController;
@@ -94,12 +93,15 @@ public class PrincipalFrame extends JFrame {
     // --------------------------------------------------
 
     private JPanel construirBarraLateral() {
-        JPanel lateral = new JPanel();
-
-        lateral.setLayout(new BoxLayout(lateral, BoxLayout.Y_AXIS));
+        JPanel lateral = new JPanel(new BorderLayout());
         lateral.setBackground(AZUL_LATERAL);
         lateral.setPreferredSize(new Dimension(224, 650));
-        lateral.setBorder(new EmptyBorder(22, 14, 18, 14));
+
+        // Menú superior: si no cabe, tendrá desplazamiento vertical.
+        JPanel menu = new JPanel();
+        menu.setLayout(new BoxLayout(menu, BoxLayout.Y_AXIS));
+        menu.setBackground(AZUL_LATERAL);
+        menu.setBorder(new EmptyBorder(22, 14, 12, 14));
 
         JLabel marca = new JLabel("SIGELAB");
         marca.setForeground(Color.WHITE);
@@ -111,17 +113,17 @@ public class PrincipalFrame extends JFrame {
         subtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 9));
         subtitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        lateral.add(marca);
-        lateral.add(Box.createVerticalStrut(3));
-        lateral.add(subtitulo);
-        lateral.add(Box.createVerticalStrut(27));
-        lateral.add(crearSeparadorLateral());
-        lateral.add(Box.createVerticalStrut(16));
+        menu.add(marca);
+        menu.add(Box.createVerticalStrut(3));
+        menu.add(subtitulo);
+        menu.add(Box.createVerticalStrut(27));
+        menu.add(crearSeparadorLateral());
+        menu.add(Box.createVerticalStrut(16));
 
-        agregarSeccion(lateral, "GENERAL");
+        agregarSeccion(menu, "GENERAL");
 
         agregarBotonLateral(
-                lateral,
+                menu,
                 "▦   Panel principal",
                 this::enfocarPrincipal
         );
@@ -132,11 +134,11 @@ public class PrincipalFrame extends JFrame {
         boolean puedeOperar =
                 esAdmin || rol == RolUsuario.ENCARGADO;
 
-        agregarEspacio(lateral, 14);
-        agregarSeccion(lateral, "CATÁLOGOS");
+        agregarEspacio(menu, 14);
+        agregarSeccion(menu, "CATÁLOGOS");
 
         agregarBotonLateral(
-                lateral,
+                menu,
                 "▣   Equipos",
                 () -> abrirVentana(
                         "equipos",
@@ -146,7 +148,7 @@ public class PrincipalFrame extends JFrame {
 
         if (esAdmin) {
             agregarBotonLateral(
-                    lateral,
+                    menu,
                     "⌂   Laboratorios",
                     () -> abrirVentana(
                             "laboratorios",
@@ -155,7 +157,7 @@ public class PrincipalFrame extends JFrame {
             );
 
             agregarBotonLateral(
-                    lateral,
+                    menu,
                     "▤   Tipos de equipo",
                     () -> abrirVentana(
                             "tipos",
@@ -164,7 +166,7 @@ public class PrincipalFrame extends JFrame {
             );
 
             agregarBotonLateral(
-                    lateral,
+                    menu,
                     "♙   Usuarios",
                     () -> abrirVentana(
                             "usuarios",
@@ -174,11 +176,11 @@ public class PrincipalFrame extends JFrame {
         }
 
         if (puedeOperar) {
-            agregarEspacio(lateral, 14);
-            agregarSeccion(lateral, "OPERACIONES");
+            agregarEspacio(menu, 14);
+            agregarSeccion(menu, "OPERACIONES");
 
             agregarBotonLateral(
-                    lateral,
+                    menu,
                     "⇄   Préstamos",
                     () -> abrirVentana(
                             "prestamos",
@@ -187,7 +189,7 @@ public class PrincipalFrame extends JFrame {
             );
 
             agregarBotonLateral(
-                    lateral,
+                    menu,
                     "↩   Devoluciones",
                     () -> abrirVentana(
                             "devoluciones",
@@ -195,11 +197,11 @@ public class PrincipalFrame extends JFrame {
                     )
             );
 
-            agregarEspacio(lateral, 14);
-            agregarSeccion(lateral, "INFORMACIÓN");
+            agregarEspacio(menu, 14);
+            agregarSeccion(menu, "INFORMACIÓN");
 
             agregarBotonLateral(
-                    lateral,
+                    menu,
                     "▥   Reportes",
                     () -> abrirVentana(
                             "reportes",
@@ -209,7 +211,7 @@ public class PrincipalFrame extends JFrame {
 
             if (esAdmin) {
                 agregarBotonLateral(
-                        lateral,
+                        menu,
                         "◷   Auditoría",
                         () -> abrirVentana(
                                 "auditoria",
@@ -219,39 +221,51 @@ public class PrincipalFrame extends JFrame {
             }
         }
 
-        // Usuario y rol en la parte inferior
-        lateral.add(Box.createVerticalGlue());
-        lateral.add(crearSeparadorLateral());
-        lateral.add(Box.createVerticalStrut(14));
+        JScrollPane scrollMenu = new JScrollPane(menu);
+        scrollMenu.setBorder(null);
+        scrollMenu.setHorizontalScrollBarPolicy(
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+        );
+        scrollMenu.setVerticalScrollBarPolicy(
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
+        );
+        scrollMenu.getViewport().setBackground(AZUL_LATERAL);
+        scrollMenu.setBackground(AZUL_LATERAL);
+
+        // Pie fijo: usuario, rol y botón siempre visibles.
+        JPanel pie = new JPanel();
+        pie.setLayout(new BoxLayout(pie, BoxLayout.Y_AXIS));
+        pie.setBackground(AZUL_LATERAL);
+        pie.setBorder(new EmptyBorder(10, 14, 18, 14));
+
+        pie.add(crearSeparadorLateral());
+        pie.add(Box.createVerticalStrut(14));
 
         JLabel usuarioLabel =
                 new JLabel("●  " + usuario.getNombreCompleto());
-
         usuarioLabel.setForeground(Color.WHITE);
-        usuarioLabel.setFont(
-                new Font("Segoe UI", Font.BOLD, 12)
-        );
+        usuarioLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         usuarioLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel rolLabel =
                 new JLabel("    " + String.valueOf(usuario.getRol()));
-
         rolLabel.setForeground(new Color(190, 207, 228));
-        rolLabel.setFont(
-                new Font("Segoe UI", Font.PLAIN, 11)
-        );
+        rolLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         rolLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        lateral.add(usuarioLabel);
-        lateral.add(Box.createVerticalStrut(4));
-        lateral.add(rolLabel);
-        lateral.add(Box.createVerticalStrut(13));
+        pie.add(usuarioLabel);
+        pie.add(Box.createVerticalStrut(4));
+        pie.add(rolLabel);
+        pie.add(Box.createVerticalStrut(13));
 
         agregarBotonLateral(
-                lateral,
+                pie,
                 "⇥   Cerrar sesión",
                 this::cerrarSesion
         );
+
+        lateral.add(scrollMenu, BorderLayout.CENTER);
+        lateral.add(pie, BorderLayout.SOUTH);
 
         return lateral;
     }
@@ -713,13 +727,48 @@ public class PrincipalFrame extends JFrame {
     }
 
     private void cerrarSesion() {
-        controladorAutenticacion.cerrarSesion();
 
-        for (JFrame ventana : ventanasAbiertas.values()) {
-            ventana.dispose();
+        int opcion = JOptionPane.showConfirmDialog(
+                this,
+                "¿Estás seguro de que deseas cerrar sesión?",
+                "Cerrar sesión",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+
+        if (opcion != JOptionPane.YES_OPTION) {
+            return;
         }
 
-        new LoginView().setVisible(true);
-        dispose();
+        try {
+            // Cerrar la sesión actual.
+            controladorAutenticacion.cerrarSesion();
+
+            // Cerrar todas las ventanas secundarias.
+            for (JFrame ventana : ventanasAbiertas.values()) {
+                if (ventana != null) {
+                    ventana.dispose();
+                }
+            }
+
+            ventanasAbiertas.clear();
+
+            // Volver al Login.
+            LoginView login = new LoginView();
+            login.setLocationRelativeTo(null);
+            login.setVisible(true);
+
+            // Cerrar la ventana principal.
+            dispose();
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No se pudo cerrar la sesión: "
+                            + ManejadorErrores.mensajeParaUsuario(e),
+                    "Error al cerrar sesión",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 }
