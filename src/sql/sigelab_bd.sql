@@ -262,6 +262,7 @@ GO
 INSERT INTO Rol (nombre, descripcion) VALUES
  ('ADMIN',     'Acceso completo al sistema'),
  ('ENCARGADO', 'Operación cotidiana de laboratorios'),
+
  ('DOCENTE',   'Consultas / solicitante');
 
 INSERT INTO Usuario (nombre, apellido, nombre_usuario, contrasena_hash, correo, id_rol, estado) VALUES
