@@ -10,6 +10,8 @@ import universidad.sigelab.util.HashUtil;
 import universidad.sigelab.util.SesionUsuario;
 
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Login en tres pasos obligatorios (sección 6.1 de la guía):
@@ -19,6 +21,8 @@ import java.util.Optional;
  * Todo ocurre dentro de iniciarSesion: la pantalla no puede saltarse el paso del rostro (RN-20).
  */
 public class AutenticacionService {
+
+    private static final Logger LOGGER = Logger.getLogger(AutenticacionService.class.getName());
 
     private final UsuarioRepository repositorioUsuario = new UsuarioRepository();
     private final AuditoriaService servicioAuditoria = new AuditoriaService();
@@ -31,8 +35,25 @@ public class AutenticacionService {
         return usuario;
     }
 
+    /**
+     * Cierra la sesión y deja constancia en la auditoría.
+     * La sesión se cierra aunque falle el registro de auditoría: el usuario nunca queda atrapado
+     * dentro del sistema por un problema de base de datos.
+     */
     public void cerrarSesion() {
+        Usuario usuario = SesionUsuario.getUsuarioActual();
         SesionUsuario.cerrar();
+
+        if (usuario == null) {
+            return;
+        }
+
+        try {
+            servicioAuditoria.registrar(usuario.getIdUsuario(), AccionAuditoria.SESION_CERRADA, "Usuario",
+                    usuario.getIdUsuario(), "Cierre de sesión de '" + usuario.getNombreUsuario() + "'");
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.WARNING, "No se pudo auditar el cierre de sesión", e);
+        }
     }
 
     // ---------- Paso 1: credenciales ----------
@@ -54,6 +75,9 @@ public class AutenticacionService {
 
         Usuario usuario = encontrado.get();
 
+        // El hash no debe viajar a la vista ni a la sesión.
+        usuario.setContrasenaHash(null);
+
         // RN-01: no se puede iniciar sesión con un usuario INACTIVO.
         if (usuario.getEstado() != EstadoRegistro.ACTIVO) {
             servicioAuditoria.registrar(usuario.getIdUsuario(), AccionAuditoria.LOGIN_FALLIDO, "Usuario",
@@ -61,7 +85,6 @@ public class AutenticacionService {
             throw new BusinessException("El usuario está inactivo. Comuníquese con el administrador.");
         }
 
-        usuario.setContrasenaHash(null); // el hash no debe viajar a la vista ni a la sesión
         return usuario;
     }
 
@@ -96,7 +119,6 @@ public class AutenticacionService {
     }
 
     private boolean coincideContrasena(Usuario usuario, String contrasenaIngresada) {
-        String hashIngresado = HashUtil.sha256(contrasenaIngresada);
-        return hashIngresado.equalsIgnoreCase(usuario.getContrasenaHash());
+        return HashUtil.coincide(contrasenaIngresada, usuario.getContrasenaHash());
     }
 }

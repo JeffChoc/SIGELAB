@@ -208,6 +208,7 @@ Trazabilidad de las operaciones importantes del sistema.
 
 - `IX_Auditoria_fecha` sobre (fecha_hora)
 - `IX_Auditoria_usuario` sobre (id_usuario)
+- `IX_Auditoria_accion` sobre (accion)
 
 ## Vistas
 

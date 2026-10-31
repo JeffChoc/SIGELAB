@@ -306,6 +306,8 @@ public class LoginView extends JFrame {
 
         textPassword.addActionListener(e -> iniciarSesion());
 
+        getRootPane().setDefaultButton(btIngresar);
+
         SwingUtilities.invokeLater(
                 () -> textUsuario.requestFocusInWindow()
         );
@@ -327,8 +329,10 @@ public class LoginView extends JFrame {
         }
 
         btIngresar.setEnabled(false);
+        textUsuario.setEnabled(false);
+        textPassword.setEnabled(false);
         btIngresar.setText("VERIFICANDO...");
-        lblEstado.setText("Validando credenciales...");
+        lblEstado.setText("Validando credenciales y rostro...");
 
         SwingWorker<Usuario, Void> trabajador = new SwingWorker<>() {
             @Override
@@ -381,6 +385,8 @@ public class LoginView extends JFrame {
 
                 } finally {
                     btIngresar.setEnabled(true);
+                    textUsuario.setEnabled(true);
+                    textPassword.setEnabled(true);
                     btIngresar.setText("INGRESAR AL SISTEMA");
                     textPassword.setText("");
                     lblEstado.setText(" ");

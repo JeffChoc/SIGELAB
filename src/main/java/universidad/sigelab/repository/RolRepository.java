@@ -44,9 +44,14 @@ public class RolRepository {
     }
 
     private Rol mapear(ResultSet resultado) throws SQLException {
-        return new Rol(
-                resultado.getInt("id_rol"),
-                RolUsuario.valueOf(resultado.getString("nombre")),
-                resultado.getString("descripcion"));
+        try {
+            return new Rol(
+                    resultado.getInt("id_rol"),
+                    RolUsuario.desde(resultado.getString("nombre")),
+                    resultado.getString("descripcion"));
+        } catch (IllegalArgumentException e) {
+            throw new DataAccessException("La base contiene un rol no reconocido: "
+                    + resultado.getString("nombre"), e);
+        }
     }
 }

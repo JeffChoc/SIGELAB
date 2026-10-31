@@ -130,9 +130,8 @@ public class PrincipalFrame extends JFrame {
 
         RolUsuario rol = usuario.getRol().getNombre();
 
-        boolean esAdmin = rol == RolUsuario.ADMIN;
-        boolean puedeOperar =
-                esAdmin || rol == RolUsuario.ENCARGADO;
+        boolean esAdmin = rol.esAdministrador();
+        boolean puedeOperar = rol.puedeOperar();
 
         agregarEspacio(menu, 14);
         agregarSeccion(menu, "CATÁLOGOS");

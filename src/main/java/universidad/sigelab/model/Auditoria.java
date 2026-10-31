@@ -8,6 +8,7 @@ public class Auditoria {
 
     private int idAuditoria;
     private Integer idUsuario;       // null en un LOGIN_FALLIDO con usuario inexistente
+    private String nombreUsuario;    // se obtiene del JOIN con Usuario; puede ser null
     private LocalDateTime fechaHora;
     private AccionAuditoria accion;
     private String entidad;
@@ -30,6 +31,8 @@ public class Auditoria {
     public void setIdAuditoria(int idAuditoria) { this.idAuditoria = idAuditoria; }
     public Integer getIdUsuario() { return idUsuario; }
     public void setIdUsuario(Integer idUsuario) { this.idUsuario = idUsuario; }
+    public String getNombreUsuario() { return nombreUsuario; }
+    public void setNombreUsuario(String nombreUsuario) { this.nombreUsuario = nombreUsuario; }
     public LocalDateTime getFechaHora() { return fechaHora; }
     public void setFechaHora(LocalDateTime fechaHora) { this.fechaHora = fechaHora; }
     public AccionAuditoria getAccion() { return accion; }

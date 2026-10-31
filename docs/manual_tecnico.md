@@ -239,10 +239,15 @@ sequenceDiagram
 `AuditoriaService` y `AuditoriaRepository` registran usuario, fecha y hora, acción, entidad, número de registro y descripción.
 Las acciones definidas en `AccionAuditoria` son: `LOGIN_EXITOSO`, `LOGIN_FALLIDO`, `EQUIPO_REGISTRADO`, `EQUIPO_MODIFICADO`,
 `EQUIPO_REPORTADO_DANADO`, `PRESTAMO_CREADO`, `EQUIPO_DEVUELTO`, `EQUIPO_ENVIADO_MANTENIMIENTO`, `MANTENIMIENTO_FINALIZADO`,
-`USUARIO_REGISTRADO`, `USUARIO_MODIFICADO`, `USUARIO_DESACTIVADO` y `USUARIO_ACTIVADO`.
+`USUARIO_REGISTRADO`, `USUARIO_MODIFICADO`, `USUARIO_DESACTIVADO`, `USUARIO_ACTIVADO` y `SESION_CERRADA`.
 
-Las operaciones con varios pasos (préstamo, devolución, mantenimiento) escriben su auditoría **dentro de la misma
-transacción**, así que si la operación se revierte, tampoco queda un registro falso.
+`SESION_CERRADA` se registra al cerrar sesión; si la auditoría falla, el cierre de sesión igual se completa para no
+dejar al usuario atrapado en la aplicación.
+
+Las operaciones con varios pasos (préstamo, devolución, mantenimiento, registro y modificación de usuarios) escriben su
+auditoría **dentro de la misma transacción**, así que si la operación se revierte, tampoco queda un registro falso.
+La consulta de auditoría está restringida al rol ADMIN y se ejecuta fuera del hilo de la interfaz para no congelar la
+ventana cuando el historial es grande.
 
 ## 12. Reportes y panel principal
 
