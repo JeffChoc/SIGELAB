@@ -70,7 +70,20 @@
                     android:textSize="14sp" />
 
             </LinearLayout>
+
         </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnIniciarSesion"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="24dp"
+            android:text="Iniciar sesión"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            app:backgroundTint="#142D4E"
+            app:cornerRadius="16dp" />
 
         <TextView
             android:layout_width="match_parent"
@@ -82,10 +95,22 @@
             android:textStyle="bold" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnEquipos"
+            android:id="@+id/btnNuevoPrestamo"
             android:layout_width="match_parent"
             android:layout_height="64dp"
             android:layout_marginTop="16dp"
+            android:text="Nuevo préstamo"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            app:backgroundTint="#142D4E"
+            app:cornerRadius="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEquipos"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="8dp"
             android:text="Consultar equipos"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
@@ -150,6 +175,7 @@
                     android:textColor="#2459D3" />
 
             </LinearLayout>
+
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
@@ -162,4 +188,5 @@
             android:textSize="13sp" />
 
     </LinearLayout>
+
 </ScrollView>

@@ -1,9 +1,10 @@
 import logging
 
 import pyodbc
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 
 from conexion import conectar
+from rutas_autenticacion import router as router_autenticacion
 
 
 app = FastAPI(
@@ -11,6 +12,8 @@ app = FastAPI(
     description="Servidor para la aplicación móvil de SIGELAB.",
     version="1.0.0"
 )
+
+app.include_router(router_autenticacion)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -55,15 +58,20 @@ def comprobar_salud():
 
 
 @app.get("/equipos")
-def consultar_equipos():
+def consultar_equipos(
+    codigo: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=100
+    )
+):
     conexion = None
 
     try:
         conexion = conectar()
         cursor = conexion.cursor()
 
-        cursor.execute(
-            """
+        consulta = """
             SELECT
                 e.id_equipo,
                 e.codigo_inventario,
@@ -78,9 +86,24 @@ def consultar_equipos():
                 ON t.id_tipo_equipo = e.id_tipo_equipo
             LEFT JOIN dbo.Laboratorio AS l
                 ON l.id_laboratorio = e.id_laboratorio
-            ORDER BY e.nombre, e.id_equipo
+        """
+
+        if codigo is not None:
+            consulta += """
+                WHERE LOWER(LTRIM(RTRIM(e.codigo_inventario))) = ?
             """
-        )
+
+        consulta += """
+            ORDER BY e.nombre, e.id_equipo
+        """
+
+        if codigo is not None:
+            cursor.execute(
+                consulta,
+                codigo.strip().lower()
+            )
+        else:
+            cursor.execute(consulta)
 
         equipos = []
 

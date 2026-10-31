@@ -19,6 +19,21 @@
         android:theme="@style/Theme.SIGELABMóvil">
 
         <activity
+            android:name=".DevolucionActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".PrestamoActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".EquiposActivity"
             android:exported="false" />
 

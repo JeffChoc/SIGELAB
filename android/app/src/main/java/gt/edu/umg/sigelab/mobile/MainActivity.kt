@@ -1,10 +1,13 @@
 package gt.edu.umg.sigelab.mobile
 
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.text.InputType
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -89,6 +92,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<MaterialButton>(
+            R.id.btnIniciarSesion
+        ).setOnClickListener {
+            startActivity(
+                Intent(this, LoginActivity::class.java)
+            )
+        }
+
+        findViewById<MaterialButton>(
+            R.id.btnNuevoPrestamo
+        ).setOnClickListener {
+            startActivity(
+                Intent(this, PrestamoActivity::class.java)
+            )
+        }
+
+        agregarBotonDevolucion()
+
+        findViewById<MaterialButton>(
             R.id.btnEquipos
         ).setOnClickListener {
             startActivity(
@@ -115,6 +136,48 @@ class MainActivity : AppCompatActivity() {
         }
 
         comprobarConexion()
+    }
+
+    private fun agregarBotonDevolucion() {
+        val botonPrestamo = findViewById<MaterialButton>(
+            R.id.btnNuevoPrestamo
+        )
+
+        val contenedor = botonPrestamo.parent as LinearLayout
+
+        val botonDevolucion = MaterialButton(this).apply {
+            text = "Devolver equipos"
+            isAllCaps = false
+            textSize = 17f
+            setTextColor(Color.WHITE)
+
+            backgroundTintList = ColorStateList.valueOf(
+                Color.parseColor("#142D4E")
+            )
+
+            cornerRadius = dp(16)
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(64)
+            ).apply {
+                topMargin = dp(8)
+            }
+
+            setOnClickListener {
+                startActivity(
+                    Intent(
+                        this@MainActivity,
+                        DevolucionActivity::class.java
+                    )
+                )
+            }
+        }
+
+        contenedor.addView(
+            botonDevolucion,
+            contenedor.indexOfChild(botonPrestamo) + 1
+        )
     }
 
     private fun abrirLectorQr() {
@@ -157,9 +220,7 @@ class MainActivity : AppCompatActivity() {
             setText(preferencias.getString("servidor", ""))
         }
 
-        val margen = (
-                24 * resources.displayMetrics.density
-                ).toInt()
+        val margen = dp(24)
 
         val contenedor = FrameLayout(this).apply {
             setPadding(margen, 0, margen, 0)
@@ -314,5 +375,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }.start()
+    }
+
+    private fun dp(valor: Int): Int {
+        return (
+                valor * resources.displayMetrics.density
+                ).toInt()
     }
 }
