@@ -210,6 +210,7 @@ CREATE TABLE Auditoria (
 );
 CREATE INDEX IX_Auditoria_fecha   ON Auditoria(fecha_hora);
 CREATE INDEX IX_Auditoria_usuario ON Auditoria(id_usuario);
+CREATE INDEX IX_Auditoria_accion  ON Auditoria(accion);
 GO
 
 /* ---------------------------------------------------------------------

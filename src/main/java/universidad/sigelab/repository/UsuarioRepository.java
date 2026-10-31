@@ -74,15 +74,47 @@ public class UsuarioRepository {
                 correo, idExcluido) > 0;
     }
 
+    /**
+     * Indica si, excluyendo al usuario indicado, queda al menos otro ADMIN activo.
+     * Se usa para no dejar el sistema sin administradores.
+     */
+    public boolean existeOtroAdministradorActivo(int idExcluido) {
+        String sql = """
+                SELECT COUNT(*)
+                FROM Usuario u
+                JOIN Rol r ON r.id_rol = u.id_rol
+                WHERE r.nombre = ? AND u.estado = ? AND u.id_usuario <> ?
+                """;
+        try (Connection conexion = DatabaseConnection.getConnection();
+             PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+            sentencia.setString(1, RolUsuario.ADMIN.name());
+            sentencia.setString(2, EstadoRegistro.ACTIVO.name());
+            sentencia.setInt(3, idExcluido);
+            try (ResultSet resultado = sentencia.executeQuery()) {
+                return resultado.next() && resultado.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Error al contar los administradores activos", e);
+        }
+    }
+
     /** Inserta usando el hash que trae el objeto usuario. Devuelve el id generado. */
     public int insertar(Usuario usuario) {
+        try (Connection conexion = DatabaseConnection.getConnection()) {
+            return insertar(conexion, usuario);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error al insertar el usuario " + usuario.getNombreUsuario(), e);
+        }
+    }
+
+    /** Variante para usar dentro de una transacción. */
+    public int insertar(Connection conexion, Usuario usuario) {
         String sql = """
                 INSERT INTO Usuario (nombre, apellido, nombre_usuario, contrasena_hash, correo,
                                      id_rol, estado, referencia_facial)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        try (Connection conexion = DatabaseConnection.getConnection();
-             PreparedStatement sentencia = conexion.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement sentencia = conexion.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             sentencia.setString(1, usuario.getNombre());
             sentencia.setString(2, usuario.getApellido());
             sentencia.setString(3, usuario.getNombreUsuario());
@@ -105,13 +137,21 @@ public class UsuarioRepository {
 
     /** No toca ni la contraseña ni el estado: tienen sus propios métodos. */
     public void actualizar(Usuario usuario) {
+        try (Connection conexion = DatabaseConnection.getConnection()) {
+            actualizar(conexion, usuario);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error al actualizar el usuario " + usuario.getIdUsuario(), e);
+        }
+    }
+
+    /** Variante para usar dentro de una transacción. */
+    public void actualizar(Connection conexion, Usuario usuario) {
         String sql = """
                 UPDATE Usuario
                 SET nombre = ?, apellido = ?, nombre_usuario = ?, correo = ?, id_rol = ?, referencia_facial = ?
                 WHERE id_usuario = ?
                 """;
-        try (Connection conexion = DatabaseConnection.getConnection();
-             PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+        try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setString(1, usuario.getNombre());
             sentencia.setString(2, usuario.getApellido());
             sentencia.setString(3, usuario.getNombreUsuario());
@@ -126,9 +166,17 @@ public class UsuarioRepository {
     }
 
     public void actualizarContrasena(int idUsuario, String contrasenaHash) {
+        try (Connection conexion = DatabaseConnection.getConnection()) {
+            actualizarContrasena(conexion, idUsuario, contrasenaHash);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error al cambiar la contraseña del usuario " + idUsuario, e);
+        }
+    }
+
+    /** Variante para usar dentro de una transacción. */
+    public void actualizarContrasena(Connection conexion, int idUsuario, String contrasenaHash) {
         String sql = "UPDATE Usuario SET contrasena_hash = ? WHERE id_usuario = ?";
-        try (Connection conexion = DatabaseConnection.getConnection();
-             PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+        try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setString(1, contrasenaHash);
             sentencia.setInt(2, idUsuario);
             sentencia.executeUpdate();
@@ -138,9 +186,17 @@ public class UsuarioRepository {
     }
 
     public void actualizarEstado(int idUsuario, EstadoRegistro estado) {
+        try (Connection conexion = DatabaseConnection.getConnection()) {
+            actualizarEstado(conexion, idUsuario, estado);
+        } catch (SQLException e) {
+            throw new DataAccessException("Error al cambiar el estado del usuario " + idUsuario, e);
+        }
+    }
+
+    /** Variante para usar dentro de una transacción. */
+    public void actualizarEstado(Connection conexion, int idUsuario, EstadoRegistro estado) {
         String sql = "UPDATE Usuario SET estado = ? WHERE id_usuario = ?";
-        try (Connection conexion = DatabaseConnection.getConnection();
-             PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+        try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setString(1, estado.name());
             sentencia.setInt(2, idUsuario);
             sentencia.executeUpdate();
@@ -163,10 +219,20 @@ public class UsuarioRepository {
     }
 
     private Usuario mapear(ResultSet resultado) throws SQLException {
-        Rol rol = new Rol(
-                resultado.getInt("id_rol"),
-                RolUsuario.valueOf(resultado.getString("rol_nombre")),
-                resultado.getString("rol_descripcion"));
+        Rol rol;
+        EstadoRegistro estado;
+        try {
+            rol = new Rol(
+                    resultado.getInt("id_rol"),
+                    RolUsuario.desde(resultado.getString("rol_nombre")),
+                    resultado.getString("rol_descripcion"));
+            estado = EstadoRegistro.valueOf(resultado.getString("estado"));
+        } catch (IllegalArgumentException e) {
+            // Un rol o estado escrito de forma distinta en la base no debe romper toda la pantalla.
+            throw new DataAccessException(
+                    "La base contiene un rol o estado de usuario no reconocido.", e);
+        }
+
         Usuario usuario = new Usuario();
         usuario.setIdUsuario(resultado.getInt("id_usuario"));
         usuario.setNombre(resultado.getString("nombre"));
@@ -175,7 +241,7 @@ public class UsuarioRepository {
         usuario.setContrasenaHash(resultado.getString("contrasena_hash"));
         usuario.setCorreo(resultado.getString("correo"));
         usuario.setRol(rol);
-        usuario.setEstado(EstadoRegistro.valueOf(resultado.getString("estado")));
+        usuario.setEstado(estado);
         usuario.setReferenciaFacial(resultado.getString("referencia_facial"));
         return usuario;
     }

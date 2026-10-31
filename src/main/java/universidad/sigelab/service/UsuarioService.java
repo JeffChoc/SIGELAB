@@ -11,6 +11,7 @@ import universidad.sigelab.repository.UsuarioRepository;
 import universidad.sigelab.util.HashUtil;
 import universidad.sigelab.util.SesionUsuario;
 import universidad.sigelab.util.TextoUtil;
+import universidad.sigelab.util.Transaccion;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -21,6 +22,7 @@ public class UsuarioService {
     private static final Pattern PATRON_USUARIO = Pattern.compile("[A-Za-z0-9._-]{3,40}");
     private static final Pattern PATRON_CORREO = Pattern.compile("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");
     private static final int LARGO_MINIMO_CONTRASENA = 8;
+    private static final int LARGO_MAXIMO_CONTRASENA = 100;
 
     private final UsuarioRepository repositorioUsuario = new UsuarioRepository();
     private final RolRepository repositorioRol = new RolRepository();
@@ -42,18 +44,24 @@ public class UsuarioService {
         SesionUsuario.exigirRol(RolUsuario.ADMIN);
         normalizar(usuario);
         validarDatos(usuario);
-        validarContrasena(contrasena);
+        validarContrasena(contrasena, usuario.getNombreUsuario());
         usuario.setRol(validarRol(usuario));
         validarDuplicados(usuario, 0);
 
         usuario.setEstado(EstadoRegistro.ACTIVO);
         usuario.setContrasenaHash(HashUtil.sha256(contrasena));
-        int idGenerado = repositorioUsuario.insertar(usuario);
-        usuario.setIdUsuario(idGenerado);
-        usuario.setContrasenaHash(null);
 
-        servicioAuditoria.registrarComoUsuarioActual(AccionAuditoria.USUARIO_REGISTRADO, "Usuario", idGenerado,
-                "Se registró el usuario '" + usuario.getNombreUsuario() + "'");
+        final int[] idGenerado = new int[1];
+        Transaccion.ejecutar(conexion -> {
+            idGenerado[0] = repositorioUsuario.insertar(conexion, usuario);
+            servicioAuditoria.registrarComoUsuarioActual(conexion, AccionAuditoria.USUARIO_REGISTRADO,
+                    "Usuario", idGenerado[0],
+                    "Se registró el usuario '" + usuario.getNombreUsuario()
+                            + "' con rol " + usuario.getRol().getNombre().name());
+        });
+
+        usuario.setIdUsuario(idGenerado[0]);
+        usuario.setContrasenaHash(null);
         return usuario;
     }
 
@@ -69,24 +77,38 @@ public class UsuarioService {
         validarDuplicados(usuario, usuario.getIdUsuario());
 
         boolean esUsuarioActual = SesionUsuario.getUsuarioActual().getIdUsuario() == usuario.getIdUsuario();
-        if (esUsuarioActual && existente.getRol().getIdRol() != usuario.getRol().getIdRol()) {
+        boolean cambiaRol = existente.getRol().getIdRol() != usuario.getRol().getIdRol();
+        if (esUsuarioActual && cambiaRol) {
             throw new BusinessException("No puede cambiar su propio rol.");
+        }
+
+        // No se permite degradar al último ADMIN activo del sistema.
+        if (cambiaRol && existente.getEstado() == EstadoRegistro.ACTIVO
+                && existente.getRol().getNombre() == RolUsuario.ADMIN
+                && !repositorioUsuario.existeOtroAdministradorActivo(existente.getIdUsuario())) {
+            throw new BusinessException("No puede cambiar el rol del último administrador activo.");
         }
 
         boolean cambiaContrasena = nuevaContrasena != null && !nuevaContrasena.isEmpty();
         if (cambiaContrasena) {
-            validarContrasena(nuevaContrasena);
+            validarContrasena(nuevaContrasena, usuario.getNombreUsuario());
         }
 
         usuario.setEstado(existente.getEstado());
-        repositorioUsuario.actualizar(usuario);
-        if (cambiaContrasena) {
-            repositorioUsuario.actualizarContrasena(usuario.getIdUsuario(), HashUtil.sha256(nuevaContrasena));
-        }
+        String descripcion = descripcionDeCambios(existente, usuario, cambiaContrasena);
 
-        servicioAuditoria.registrarComoUsuarioActual(AccionAuditoria.USUARIO_MODIFICADO, "Usuario",
-                usuario.getIdUsuario(), "Se modificó el usuario '" + usuario.getNombreUsuario() + "'"
-                        + (cambiaContrasena ? " (con cambio de contraseña)" : ""));
+        Transaccion.ejecutar(conexion -> {
+            repositorioUsuario.actualizar(conexion, usuario);
+            if (cambiaContrasena) {
+                repositorioUsuario.actualizarContrasena(conexion, usuario.getIdUsuario(),
+                        HashUtil.sha256(nuevaContrasena));
+            }
+            servicioAuditoria.registrarComoUsuarioActual(conexion, AccionAuditoria.USUARIO_MODIFICADO,
+                    "Usuario", usuario.getIdUsuario(), descripcion);
+        });
+
+        usuario.setContrasenaHash(null);
+        SesionUsuario.actualizarDatos(usuario);
         return usuario;
     }
 
@@ -100,9 +122,17 @@ public class UsuarioService {
         if (existente.getEstado() == EstadoRegistro.INACTIVO) {
             throw new BusinessException("El usuario " + existente.getNombreUsuario() + " ya está inactivo.");
         }
-        repositorioUsuario.actualizarEstado(idUsuario, EstadoRegistro.INACTIVO);
-        servicioAuditoria.registrarComoUsuarioActual(AccionAuditoria.USUARIO_DESACTIVADO, "Usuario", idUsuario,
-                "Se desactivó el usuario '" + existente.getNombreUsuario() + "'");
+        if (existente.getRol().getNombre() == RolUsuario.ADMIN
+                && !repositorioUsuario.existeOtroAdministradorActivo(idUsuario)) {
+            throw new BusinessException("No puede desactivar al último administrador activo.");
+        }
+
+        Transaccion.ejecutar(conexion -> {
+            repositorioUsuario.actualizarEstado(conexion, idUsuario, EstadoRegistro.INACTIVO);
+            servicioAuditoria.registrarComoUsuarioActual(conexion, AccionAuditoria.USUARIO_DESACTIVADO,
+                    "Usuario", idUsuario,
+                    "Se desactivó el usuario '" + existente.getNombreUsuario() + "'");
+        });
     }
 
     public void activar(int idUsuario) {
@@ -112,9 +142,13 @@ public class UsuarioService {
         if (existente.getEstado() == EstadoRegistro.ACTIVO) {
             throw new BusinessException("El usuario " + existente.getNombreUsuario() + " ya está activo.");
         }
-        repositorioUsuario.actualizarEstado(idUsuario, EstadoRegistro.ACTIVO);
-        servicioAuditoria.registrarComoUsuarioActual(AccionAuditoria.USUARIO_ACTIVADO, "Usuario", idUsuario,
-                "Se activó el usuario '" + existente.getNombreUsuario() + "'");
+
+        Transaccion.ejecutar(conexion -> {
+            repositorioUsuario.actualizarEstado(conexion, idUsuario, EstadoRegistro.ACTIVO);
+            servicioAuditoria.registrarComoUsuarioActual(conexion, AccionAuditoria.USUARIO_ACTIVADO,
+                    "Usuario", idUsuario,
+                    "Se activó el usuario '" + existente.getNombreUsuario() + "'");
+        });
     }
 
     // ---------- Validaciones privadas ----------
@@ -158,9 +192,22 @@ public class UsuarioService {
         }
     }
 
-    private void validarContrasena(String contrasena) {
+    private void validarContrasena(String contrasena, String nombreUsuario) {
         if (contrasena == null || contrasena.length() < LARGO_MINIMO_CONTRASENA) {
             throw new BusinessException("La contraseña debe tener al menos " + LARGO_MINIMO_CONTRASENA + " caracteres.");
+        }
+        if (contrasena.length() > LARGO_MAXIMO_CONTRASENA) {
+            throw new BusinessException("La contraseña no puede superar " + LARGO_MAXIMO_CONTRASENA + " caracteres.");
+        }
+
+        boolean tieneLetra = contrasena.chars().anyMatch(Character::isLetter);
+        boolean tieneDigito = contrasena.chars().anyMatch(Character::isDigit);
+        if (!tieneLetra || !tieneDigito) {
+            throw new BusinessException("La contraseña debe combinar al menos una letra y un número.");
+        }
+
+        if (nombreUsuario != null && contrasena.equalsIgnoreCase(nombreUsuario)) {
+            throw new BusinessException("La contraseña no puede ser igual al nombre de usuario.");
         }
     }
 
@@ -177,5 +224,23 @@ public class UsuarioService {
         if (repositorioUsuario.existeCorreo(usuario.getCorreo(), idExcluido)) {
             throw new BusinessException("Ya existe un usuario con el correo " + usuario.getCorreo() + ".");
         }
+    }
+
+    /** Deja en la auditoría qué cambió, sin guardar nunca la contraseña. */
+    private String descripcionDeCambios(Usuario anterior, Usuario nuevo, boolean cambiaContrasena) {
+        StringBuilder descripcion = new StringBuilder("Se modificó el usuario '")
+                .append(nuevo.getNombreUsuario()).append("'");
+
+        if (anterior.getRol().getIdRol() != nuevo.getRol().getIdRol()) {
+            descripcion.append(" (rol: ")
+                    .append(anterior.getRol().getNombre().name())
+                    .append(" -> ")
+                    .append(nuevo.getRol().getNombre().name())
+                    .append(")");
+        }
+        if (cambiaContrasena) {
+            descripcion.append(" (contraseña actualizada)");
+        }
+        return descripcion.toString();
     }
 }

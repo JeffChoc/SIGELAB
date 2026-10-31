@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Consulta de auditoría (RN-18).
@@ -128,74 +129,108 @@ public class AuditoriaView extends JFrame {
 
     /**
      * Consulta los registros de auditoría.
+     * La consulta corre en segundo plano para que la ventana no se congele
+     * mientras SQL Server responde.
      */
     private void consultar() {
 
+        if (!btConsultar.isEnabled()) {
+            return; // ya hay una consulta en curso
+        }
+
+        final AccionAuditoria accion;
+        final LocalDate desde;
+        final LocalDate hasta;
+        final String usuario;
+
         try {
-            String seleccion =
-                    (String) comboAccion.getSelectedItem();
+            String seleccion = (String) comboAccion.getSelectedItem();
 
-            AccionAuditoria accion =
-                    (seleccion == null
-                            || OPCION_TODAS.equals(seleccion))
-                            ? null
-                            : AccionAuditoria.valueOf(seleccion);
+            accion = (seleccion == null || OPCION_TODAS.equals(seleccion))
+                    ? null
+                    : AccionAuditoria.valueOf(seleccion);
 
-            LocalDate desde = checkFechas.isSelected()
-                    ? aFecha(spinnerDesde)
-                    : null;
+            desde = checkFechas.isSelected() ? aFecha(spinnerDesde) : null;
+            hasta = checkFechas.isSelected() ? aFecha(spinnerHasta) : null;
+            usuario = textUsuario.getText().trim();
 
-            LocalDate hasta = checkFechas.isSelected()
-                    ? aFecha(spinnerHasta)
-                    : null;
-
-            if (desde != null && hasta != null
-                    && desde.isAfter(hasta)) {
-
-                JOptionPane.showMessageDialog(
-                        this,
-                        "La fecha inicial no puede ser posterior "
-                                + "a la fecha final.",
-                        "Fechas inválidas",
-                        JOptionPane.WARNING_MESSAGE
-                );
-                return;
-            }
-
-            btConsultar.setEnabled(false);
-
-            ResultadoReporte resultado =
-                    controladorAuditoria.consultar(
-                            desde,
-                            hasta,
-                            accion,
-                            textUsuario.getText().trim()
-                    );
-
-            Object[][] filas = resultado.getFilas()
-                    .toArray(new Object[0][]);
-
-            modeloTabla.setDataVector(
-                    filas,
-                    resultado.getColumnas().toArray()
-            );
-
-            labelTotal.setText(
-                    filas.length + " registro(s) encontrados."
-            );
-
-        } catch (Exception e) {
-
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(
                     this,
                     ManejadorErrores.mensajeParaUsuario(e),
-                    "No se pudo consultar la auditoría",
+                    "Filtros inválidos",
                     JOptionPane.WARNING_MESSAGE
             );
-
-        } finally {
-            btConsultar.setEnabled(true);
+            return;
         }
+
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "La fecha inicial no puede ser posterior a la fecha final.",
+                    "Fechas inválidas",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        btConsultar.setEnabled(false);
+        labelTotal.setText("Consultando...");
+
+        new SwingWorker<ResultadoReporte, Void>() {
+
+            @Override
+            protected ResultadoReporte doInBackground() {
+                return controladorAuditoria.consultar(
+                        desde,
+                        hasta,
+                        accion,
+                        usuario
+                );
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    ResultadoReporte resultado = get();
+
+                    Object[][] filas = resultado.getFilas()
+                            .toArray(new Object[0][]);
+
+                    modeloTabla.setDataVector(
+                            filas,
+                            resultado.getColumnas().toArray()
+                    );
+
+                    labelTotal.setText(
+                            filas.length + " registro(s) encontrados."
+                    );
+
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+
+                    JOptionPane.showMessageDialog(
+                            AuditoriaView.this,
+                            "La consulta fue interrumpida.",
+                            "Auditoría",
+                            JOptionPane.WARNING_MESSAGE
+                    );
+
+                } catch (ExecutionException e) {
+                    Throwable causa = e.getCause() != null ? e.getCause() : e;
+
+                    JOptionPane.showMessageDialog(
+                            AuditoriaView.this,
+                            ManejadorErrores.mensajeParaUsuario(causa),
+                            "No se pudo consultar la auditoría",
+                            JOptionPane.WARNING_MESSAGE
+                    );
+
+                } finally {
+                    btConsultar.setEnabled(true);
+                }
+            }
+        }.execute();
     }
 
     /**

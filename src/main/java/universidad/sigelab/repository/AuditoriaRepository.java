@@ -77,6 +77,7 @@ public class AuditoriaRepository {
         StringBuilder sql = new StringBuilder("""
                 SELECT a.id_auditoria,
                        a.id_usuario,
+                       u.nombre_usuario,
                        a.fecha_hora,
                        a.accion,
                        a.entidad,
@@ -103,7 +104,7 @@ public class AuditoriaRepository {
             sql.append(" AND u.nombre_usuario LIKE ?");
         }
 
-        sql.append(" ORDER BY a.fecha_hora DESC");
+        sql.append(" ORDER BY a.fecha_hora DESC, a.id_auditoria DESC");
 
         try (Connection conexion = DatabaseConnection.getConnection();
              PreparedStatement sentencia =
@@ -141,6 +142,9 @@ public class AuditoriaRepository {
                     int idUsuario = resultado.getInt("id_usuario");
                     auditoria.setIdUsuario(
                             resultado.wasNull() ? null : idUsuario);
+
+                    auditoria.setNombreUsuario(
+                            resultado.getString("nombre_usuario"));
 
                     Timestamp fechaHora =
                             resultado.getTimestamp("fecha_hora");

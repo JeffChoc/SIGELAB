@@ -109,6 +109,9 @@ debe ser la carpeta del `pom.xml` (donde está `config.properties`). La consola 
 
 Para iniciar sesión, cada usuario necesita su rostro registrado (paso 4) y el servicio facial encendido.
 
+Las contraseñas nuevas deben tener al menos 8 caracteres, combinar letras y números, y no pueden
+superar 100 caracteres ni ser iguales al nombre de usuario. En la base se guarda solo el hash SHA-256.
+
 ## Roles
 
 | Rol | Alcance |
@@ -121,8 +124,10 @@ El menú se adapta al rol, pero los permisos se validan en la capa `service`, no
 
 ## Funciones principales
 
-- **Inicio de sesión** con usuario, contraseña y validación facial. Rechaza usuarios inactivos.
-- **Usuarios y roles**, con desactivación lógica y registro del rostro.
+- **Inicio de sesión** con usuario, contraseña y validación facial. Rechaza usuarios inactivos y
+  registra en auditoría los intentos fallidos, los accesos correctos y los cierres de sesión.
+- **Usuarios y roles**, con desactivación lógica, registro del rostro y protección para no dejar
+  el sistema sin ningún administrador activo.
 - **Laboratorios y tipos de equipo**, con códigos únicos.
 - **Equipos** con los cinco estados (DISPONIBLE, PRESTADO, DANADO, MANTENIMIENTO, BAJA).
   Desde la pantalla se reporta un daño, se envía a mantenimiento y se finaliza el mantenimiento.
@@ -134,7 +139,8 @@ El menú se adapta al rol, pero los permisos se validan en la capa `service`, no
 - **Panel principal** con las cantidades de equipos y préstamos, calculadas desde la base de datos.
 - **Reportes:** equipos por estado, por laboratorio y estado, préstamos (activos, finalizados, vencidos),
   préstamos entre fechas e historiales de préstamos y de mantenimiento de un equipo.
-- **Auditoría** de las operaciones importantes, con consulta para el ADMIN.
+- **Auditoría** de las operaciones importantes, con consulta para el ADMIN. El reporte muestra el
+  usuario, la fecha y hora, la acción, la entidad afectada y la descripción del cambio.
 
 ## Documentación
 
@@ -142,6 +148,7 @@ El menú se adapta al rol, pero los permisos se validan en la capa `service`, no
 - Diccionario de datos: [`docs/diccionario_datos.md`](docs/diccionario_datos.md)
 - Script de la base de datos: [`sql/sigelab_bd.sql`](sql/sigelab_bd.sql)
 - Servicio facial: [`facial/LEEME.md`](facial/LEEME.md)
+- Cómo subir cambios a GitHub: [`docs/guia_git.md`](docs/guia_git.md)
 
 ## Dependencias externas
 

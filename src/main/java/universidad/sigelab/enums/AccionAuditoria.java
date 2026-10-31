@@ -3,6 +3,7 @@ package universidad.sigelab.enums;
 public enum AccionAuditoria {
     LOGIN_EXITOSO,
     LOGIN_FALLIDO,
+    SESION_CERRADA,
     EQUIPO_REGISTRADO,
     EQUIPO_MODIFICADO,
     EQUIPO_REPORTADO_DANADO,
