@@ -64,7 +64,7 @@ def abrir_camara():
 
 
 def detectar_rostro(cuadro):
-    """Devuelve (rostro recortado en gris 200x200, caja) del rostro más grande, o (None, None)."""
+    """Devuelve (rostro recortado en gris 200lesterx200, caja) del rostro más grande, o (None, None)."""
     gris = cv2.cvtColor(cuadro, cv2.COLOR_BGR2GRAY)
     gris = cv2.equalizeHist(gris)
     rostros = detector_rostros.detectMultiScale(gris, scaleFactor=1.2, minNeighbors=5, minSize=(80, 80))

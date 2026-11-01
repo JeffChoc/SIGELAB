@@ -1,7 +1,7 @@
 # Reparto del trabajo - SIGELAB
 
 El proyecto se divide en siete áreas que coinciden con la rúbrica. Cada persona es responsable de **conocer, probar y poder
-defender** su área: la guía del proyecto indica que cada estudiante debe explicar, localizar y modificar su propio código.
+defender** su área: la guía del proyecto que cada estudiante debe explicar, localizar y modificar su propio código.
 
 | # | Área | Responsable | Carpetas y archivos principales | Rúbrica | Casos de prueba |
 |---|---|---|---|---|---|
@@ -13,7 +13,6 @@ defender** su área: la guía del proyecto indica que cada estudiante debe expli
 | 6 | Préstamos y QR | [nombre] | `Prestamo*`, `QrService`, `PrestamoView` | Préstamos (15) y QR (5) | CP-04 a CP-10, PA-06, PA-07 |
 | 7 | Devoluciones, panel principal y reportes | [nombre] | `Devolucion*`, `Dashboard*`, `Reporte*` | Devoluciones (15) y reportes (5), en parte | CP-11 a CP-14, CP-18, PA-10 |
 
-Todos conocen además el flujo completo: la guía pide que cada integrante pueda explicarlo de principio a fin.
 
 ## Cómo se trabaja en Git
 
