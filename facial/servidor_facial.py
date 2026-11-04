@@ -298,7 +298,6 @@ def main():
     verificar.add_argument("usuario", type=int, help="id del usuario en la base de datos")
     argumentos = analizador.parse_args()
 
-
     comando = argumentos.comando or "servidor"
     if comando == "registrar":
         exito, mensaje, _ = registrar_rostro(argumentos.usuario)
@@ -309,6 +308,7 @@ def main():
               + ("" if confianza is None else " (confianza media %s)" % confianza))
     else:
         iniciar_servidor()
+
 
 
 if __name__ == "__main__":
