@@ -224,6 +224,7 @@ class Manejador(BaseHTTPRequestHandler):
     # HTTPServer atiende una solicitud a la vez: la cámara no se usa en paralelo y la ventana
     # de vista previa siempre se abre desde el mismo hilo.
 
+
     def _responder(self, datos, codigo=200):
         cuerpo = json.dumps(datos, ensure_ascii=False).encode("utf-8")
         self.send_response(codigo)
