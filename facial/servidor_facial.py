@@ -220,6 +220,7 @@ def verificar_rostro(id_usuario):
 
 # ---------------------------------------------------------------- servidor HTTP
 
+
 class Manejador(BaseHTTPRequestHandler):
     # HTTPServer atiende una solicitud a la vez: la cámara no se usa en paralelo y la ventana
     # de vista previa siempre se abre desde el mismo hilo.
