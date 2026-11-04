@@ -298,6 +298,7 @@ def main():
     verificar.add_argument("usuario", type=int, help="id del usuario en la base de datos")
     argumentos = analizador.parse_args()
 
+
     comando = argumentos.comando or "servidor"
     if comando == "registrar":
         exito, mensaje, _ = registrar_rostro(argumentos.usuario)
@@ -312,5 +313,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
