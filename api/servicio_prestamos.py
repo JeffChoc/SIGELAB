@@ -13,10 +13,11 @@ def registrar_prestamo(
     id_usuario_sesion: int
 ):
     """
-    Uso interno del servidor.
+    Registra un prestamo de equipos en SIGELAB.
 
-    id_usuario_sesion debe proceder de una sesión autenticada
-    con verificación facial. Nunca del formulario de Android.
+    El identificador del usuario debe provenir de una
+    sesion autenticada y validada por el servidor.
+    Nunca debe recibirse directamente del formulario Android.
     """
 
     conexion = conectar()
@@ -25,6 +26,7 @@ def registrar_prestamo(
         conexion.autocommit = False
         cursor = conexion.cursor()
 
+        # Verificar usuario y permisos.
         cursor.execute(
             """
             SELECT
@@ -42,27 +44,28 @@ def registrar_prestamo(
 
         if usuario is None:
             raise ErrorPrestamo(
-                "El usuario de la sesión no existe."
+                "El usuario de la sesion no existe."
             )
 
         if usuario.estado != "ACTIVO":
             raise ErrorPrestamo(
-                "El usuario está inactivo."
+                "El usuario esta inactivo."
             )
 
         if usuario.rol not in ("ADMIN", "ENCARGADO"):
             raise ErrorPrestamo(
-                "No tienes permiso para registrar préstamos."
+                "No tienes permiso para registrar prestamos."
             )
 
+        # Validar fecha de devolucion.
         if solicitud.fecha_esperada <= datetime.now():
             raise ErrorPrestamo(
-                "La devolución esperada debe ser una fecha futura."
+                "La devolucion esperada debe ser una fecha futura."
             )
 
         equipos_actuales = []
 
-        # Se bloquean en orden para coordinar operaciones simultáneas.
+        # Verificar y bloquear equipos en orden.
         for id_equipo in sorted(solicitud.equipos):
             cursor.execute(
                 """
@@ -80,17 +83,19 @@ def registrar_prestamo(
 
             if equipo is None:
                 raise ErrorPrestamo(
-                    f"El equipo con identificador {id_equipo} ya no existe."
+                    f"El equipo con identificador "
+                    f"{id_equipo} ya no existe."
                 )
 
             if equipo.estado != "DISPONIBLE":
                 raise ErrorPrestamo(
                     f"El equipo {equipo.codigo_inventario} "
-                    f"no puede prestarse: está {equipo.estado}."
+                    f"no puede prestarse: esta {equipo.estado}."
                 )
 
             equipos_actuales.append(equipo)
 
+        # Registrar prestamo principal.
         cursor.execute(
             """
             SET NOCOUNT ON;
@@ -117,12 +122,14 @@ def registrar_prestamo(
 
         if fila is None or fila[0] is None:
             raise ErrorPrestamo(
-                "No se pudo obtener el identificador del préstamo."
+                "No se pudo obtener el identificador del prestamo."
             )
 
         id_prestamo = int(fila[0])
 
+        # Registrar detalle y actualizar equipos.
         for equipo in equipos_actuales:
+
             cursor.execute(
                 """
                 INSERT INTO dbo.DetallePrestamo (
@@ -135,33 +142,45 @@ def registrar_prestamo(
                 equipo.id_equipo
             )
 
+            # Comprobar directamente las filas actualizadas.
             cursor.execute(
                 """
+                SET NOCOUNT ON;
+
                 UPDATE dbo.Equipo
                 SET estado = 'PRESTADO'
                 WHERE id_equipo = ?
-                  AND estado = 'DISPONIBLE'
+                  AND estado = 'DISPONIBLE';
+
+                SELECT @@ROWCOUNT;
                 """,
                 equipo.id_equipo
             )
 
-            if cursor.rowcount != 1:
+            filas_actualizadas = cursor.fetchone()
+
+            if (
+                filas_actualizadas is None
+                or filas_actualizadas[0] != 1
+            ):
                 raise ErrorPrestamo(
                     f"El equipo {equipo.codigo_inventario} "
-                    "dejó de estar disponible. "
-                    "Se canceló el préstamo completo."
+                    "dejo de estar disponible. "
+                    "Se cancelo el prestamo completo."
                 )
 
+        # Crear descripcion para auditoria.
         codigos = ", ".join(
             equipo.codigo_inventario
             for equipo in equipos_actuales
         )
 
         descripcion = (
-            f"Préstamo a {solicitud.solicitante} "
+            f"Prestamo a {solicitud.solicitante} "
             f"con {len(equipos_actuales)} equipo(s): {codigos}"
         )[:300]
 
+        # Registrar auditoria.
         cursor.execute(
             """
             INSERT INTO dbo.Auditoria (
@@ -180,15 +199,17 @@ def registrar_prestamo(
             descripcion
         )
 
+        # Confirmar todos los cambios.
         conexion.commit()
 
         return {
             "id_prestamo": id_prestamo,
-            "mensaje": "Préstamo registrado correctamente",
+            "mensaje": "Prestamo registrado correctamente",
             "total_equipos": len(equipos_actuales)
         }
 
     except Exception:
+        # Si algo falla, cancelar todos los cambios.
         conexion.rollback()
         raise
 

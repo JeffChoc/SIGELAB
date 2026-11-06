@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/facialPrincipal"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F3F6FB"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Verifica tu identidad"
+        android:textColor="#142D4E"
+        android:textSize="26sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Mira la cámara de frente, mantén el teléfono quieto y procura tener buena iluminación."
+        android:textColor="#526580"
+        android:textSize="15sp" />
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/vistaCamaraFacial"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="20dp"
+        android:background="#142D4E"
+        android:contentDescription="Vista previa de la cámara frontal"
+        app:implementationMode="compatible"
+        app:scaleType="fitCenter" />
+
+    <TextView
+        android:id="@+id/txtEstadoFacial"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:accessibilityLiveRegion="polite"
+        android:text="Preparando cámara…"
+        android:textColor="#142D4E"
+        android:textSize="15sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnVerificarRostro"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="16dp"
+        android:enabled="false"
+        android:text="Verificar mi rostro"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="17sp"
+        app:backgroundTint="#2459D3"
+        app:cornerRadius="16dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCancelarFacial"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Cancelar"
+        android:textAllCaps="false"
+        android:textColor="#2459D3" />
+
+</LinearLayout>

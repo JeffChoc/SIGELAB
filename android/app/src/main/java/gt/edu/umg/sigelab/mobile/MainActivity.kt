@@ -31,6 +31,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var numeroComprobacion = 0
+    private var cerrandoSesion = false
+
+    private fun sesionDisponible(): Boolean {
+        val sesion = SesionMovil.actual ?: return false
+        val servidor = preferencias.getString("servidor", "")
+            .orEmpty().trim().trimEnd('/')
+        return sesion.token.isNotBlank() &&
+                sesion.servidor.trimEnd('/') == servidor
+    }
+
+    private fun abrirInicioSesion() {
+        startActivity(
+            Intent(this, LoginActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+        )
+        finish()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!sesionDisponible() && !isFinishing) {
+            SesionMovil.limpiar()
+            abrirInicioSesion()
+        }
+    }
 
     private val lectorQr = registerForActivityResult(
         ScanContract()
@@ -71,6 +97,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!sesionDisponible()) {
+            SesionMovil.limpiar()
+            abrirInicioSesion()
+            return
+        }
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
@@ -91,12 +122,10 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        findViewById<MaterialButton>(
-            R.id.btnIniciarSesion
-        ).setOnClickListener {
-            startActivity(
-                Intent(this, LoginActivity::class.java)
-            )
+        // Conservamos el mismo botón del diseño: ahora cierra la sesión.
+        findViewById<MaterialButton>(R.id.btnIniciarSesion).apply {
+            text = "Cerrar sesión"
+            setOnClickListener { confirmarCerrarSesion() }
         }
 
         findViewById<MaterialButton>(
@@ -136,6 +165,60 @@ class MainActivity : AppCompatActivity() {
         }
 
         comprobarConexion()
+    }
+
+    private fun confirmarCerrarSesion() {
+        if (cerrandoSesion) return
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Cerrar sesión")
+            .setMessage("¿Deseas cerrar tu sesión de SIGELAB Móvil?")
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Cerrar sesión") { _, _ -> cerrarSesion() }
+            .show()
+    }
+
+    private fun cerrarSesion() {
+        if (cerrandoSesion) return
+        cerrandoSesion = true
+        val sesion = SesionMovil.actual
+
+        // Se revoca el acceso local de inmediato, aunque no haya Wi-Fi.
+        SesionMovil.limpiar()
+
+        // Intento de invalidar también el token en FastAPI, sin bloquear la pantalla.
+        // Si no hay conexión, el token remoto puede seguir vigente hasta vencer.
+        if (sesion != null && sesion.token.isNotBlank()) {
+            Thread {
+                var conexion: HttpURLConnection? = null
+                try {
+                    val http = URL(
+                        "${sesion.servidor.trimEnd('/')}/autenticacion/cerrar"
+                    ).openConnection() as HttpURLConnection
+                    conexion = http
+                    http.requestMethod = "POST"
+                    http.connectTimeout = 5000
+                    http.readTimeout = 5000
+                    http.instanceFollowRedirects = false
+                    http.useCaches = false
+                    http.setRequestProperty("Accept", "application/json")
+                    http.setRequestProperty(
+                        "Authorization", "Bearer ${sesion.token}"
+                    )
+                    http.responseCode
+                } catch (_: Exception) {
+                    // El cierre local ya se realizó; no se reabre la sesión.
+                } finally {
+                    conexion?.disconnect()
+                }
+            }.start()
+        }
+
+        Toast.makeText(
+            this,
+            "Sesión cerrada en este teléfono",
+            Toast.LENGTH_SHORT
+        ).show()
+        abrirInicioSesion()
     }
 
     private fun agregarBotonDevolucion() {
