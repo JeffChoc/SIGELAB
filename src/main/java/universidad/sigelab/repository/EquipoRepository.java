@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** Solo acceso a datos: aquí no hay reglas de negocio. */
+/** Solo acceso a datos */
 public class EquipoRepository {
 
     private static final String SELECT_BASE = """
